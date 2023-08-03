@@ -38,7 +38,6 @@ import org.eclipse.tractusx.managedidentitywallets.dao.entity.Wallet;
 import org.eclipse.tractusx.managedidentitywallets.dao.repository.HoldersCredentialRepository;
 import org.eclipse.tractusx.managedidentitywallets.exception.CredentialNotFoundProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.ForbiddenException;
-import org.eclipse.tractusx.managedidentitywallets.utils.CommonUtils;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
 import org.springframework.data.domain.Page;
@@ -50,10 +49,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.net.URI;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * The type Credential service.
@@ -156,11 +156,11 @@ public class HoldersCredentialService extends BaseService<HoldersCredential, Lon
         // get Key
         byte[] privateKeyBytes = walletKeyService.getPrivateKeyByWalletIdentifierAsBytes(issuerWallet.getId());
 
+        //set random id
+        verifiableCredential.put(VerifiableCredential.ID, URI.create(issuerWallet.getDidDocument().getId() + "#" + URI.create(UUID.randomUUID().toString())));
+        
         // Create Credential
-        HoldersCredential credential = CommonUtils.getHoldersCredential(verifiableCredential.getCredentialSubject().get(0),
-                verifiableCredential.getTypes(), issuerWallet.getDidDocument(),
-                privateKeyBytes, issuerWallet.getDid(),
-                verifiableCredential.getContext(), Date.from(verifiableCredential.getExpirationDate()), true);
+        HoldersCredential credential = commonService.getHoldersCredential(verifiableCredential, issuerWallet.getDidDocument(), privateKeyBytes, issuerWallet.getDid(), true);
 
         //Store Credential in holder table
         credential = create(credential);

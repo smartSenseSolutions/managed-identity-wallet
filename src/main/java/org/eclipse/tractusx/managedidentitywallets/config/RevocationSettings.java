@@ -19,30 +19,12 @@
  * ******************************************************************************
  */
 
-package org.eclipse.tractusx.managedidentitywallets.utils;
+package org.eclipse.tractusx.managedidentitywallets.config;
 
-import org.eclipse.tractusx.managedidentitywallets.constant.StringPool;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * The type Common utils.
- */
-public class CommonUtils {
+import java.net.URI;
 
-    private CommonUtils() {
-        throw new IllegalStateException("Utility class");
-    }
-
-    /**
-     * Gets identifier type.
-     *
-     * @param identifier the identifier
-     * @return the identifier type
-     */
-    public static String getIdentifierType(String identifier) {
-        if (identifier.startsWith("did:web")) {
-            return StringPool.DID;
-        } else {
-            return StringPool.BPN;
-        }
-    }
+@ConfigurationProperties(prefix = "miw.revocation")
+public record RevocationSettings(String host, String apiKey, URI contextUrl) {
 }

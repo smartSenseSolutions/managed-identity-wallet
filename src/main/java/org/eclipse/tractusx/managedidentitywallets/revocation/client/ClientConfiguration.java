@@ -19,30 +19,33 @@
  * ******************************************************************************
  */
 
-package org.eclipse.tractusx.managedidentitywallets.utils;
 
-import org.eclipse.tractusx.managedidentitywallets.constant.StringPool;
+package org.eclipse.tractusx.managedidentitywallets.revocation.client;
 
-/**
- * The type Common utils.
- */
-public class CommonUtils {
+import feign.RequestInterceptor;
+import feign.RequestTemplate;
+import org.eclipse.tractusx.managedidentitywallets.config.RevocationSettings;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
-    private CommonUtils() {
-        throw new IllegalStateException("Utility class");
+@Configuration
+public class ClientConfiguration {
+
+
+    private final String apiKey;
+
+    public ClientConfiguration(RevocationSettings revocationSettings) {
+        apiKey = revocationSettings.apiKey();
     }
 
-    /**
-     * Gets identifier type.
-     *
-     * @param identifier the identifier
-     * @return the identifier type
-     */
-    public static String getIdentifierType(String identifier) {
-        if (identifier.startsWith("did:web")) {
-            return StringPool.DID;
-        } else {
-            return StringPool.BPN;
-        }
+    @Bean
+    public RequestInterceptor apiKeyRequestInterceptor() {
+        return new RequestInterceptor() {
+            @Override
+            public void apply(RequestTemplate template) {
+                template.header("X-API-KEY",
+                        String.format(apiKey));
+            }
+        };
     }
 }

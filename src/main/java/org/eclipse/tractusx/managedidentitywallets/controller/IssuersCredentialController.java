@@ -1178,7 +1178,9 @@ public class IssuersCredentialController extends BaseController {
                                 }
                     """))
     })
-    public ResponseEntity<VerifiableCredential> issueCredentialUsingBaseWallet(@Parameter(description = "Holder DID", examples = {@ExampleObject(description = "did", name = "did", value = "did:web:localhost:BPNL000000000000")}) @RequestParam(name = "holderDid") String holderDid, @RequestBody Map<String, Object> data, Principal principal) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(issuersCredentialService.issueCredentialUsingBaseWallet(holderDid, data, getBPNFromToken(principal)));
+    public ResponseEntity<VerifiableCredential> issueCredentialUsingBaseWallet(@Parameter(description = "Holder DID", examples = {@ExampleObject(description = "did", name = "did", value = "did:web:localhost:BPNL000000000000")}) @RequestParam(name = "holderDid") String holderDid,
+                                                                               @Parameter(description = "true if you want issue revocable credentials. Default will be false") @RequestParam(name = "revocable", required = false, defaultValue = "false") boolean revocable, @RequestBody Map<String, Object> data, Principal principal) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(issuersCredentialService.issueCredentialUsingBaseWallet(holderDid, revocable, data, getBPNFromToken(principal)));
+
     }
 }

@@ -19,30 +19,18 @@
  * ******************************************************************************
  */
 
-package org.eclipse.tractusx.managedidentitywallets.utils;
+package org.eclipse.tractusx.managedidentitywallets.revocation.model;
 
-import org.eclipse.tractusx.managedidentitywallets.constant.StringPool;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.Setter;
 
-/**
- * The type Common utils.
- */
-public class CommonUtils {
+@Builder
+@Getter
+@Setter
+public class StatusEntryRequest {
 
-    private CommonUtils() {
-        throw new IllegalStateException("Utility class");
-    }
+    private String credentialUrl;
 
-    /**
-     * Gets identifier type.
-     *
-     * @param identifier the identifier
-     * @return the identifier type
-     */
-    public static String getIdentifierType(String identifier) {
-        if (identifier.startsWith("did:web")) {
-            return StringPool.DID;
-        } else {
-            return StringPool.BPN;
-        }
-    }
+    private String purpose;
 }
