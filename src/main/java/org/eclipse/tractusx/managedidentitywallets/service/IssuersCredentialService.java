@@ -95,6 +95,7 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
 
     private final RevocationService revocationService;
 
+
     /**
      * Instantiates a new Issuers credential service.
      *
