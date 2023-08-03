@@ -43,6 +43,7 @@ import org.eclipse.tractusx.managedidentitywallets.dto.IssueDismantlerCredential
 import org.eclipse.tractusx.managedidentitywallets.dto.IssueFrameworkCredentialRequest;
 import org.eclipse.tractusx.managedidentitywallets.dto.IssueMembershipCredentialRequest;
 import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
+import org.eclipse.tractusx.managedidentitywallets.exception.CredentialNotFoundProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.DuplicateCredentialProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.ForbiddenException;
 import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
@@ -52,10 +53,7 @@ import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl
 import org.eclipse.tractusx.ssi.lib.did.web.DidWebDocumentResolver;
 import org.eclipse.tractusx.ssi.lib.did.web.util.DidWebParser;
 import org.eclipse.tractusx.ssi.lib.model.did.DidDocument;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialBuilder;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialSubject;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialType;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.*;
 import org.eclipse.tractusx.ssi.lib.proof.LinkedDataProofValidation;
 import org.eclipse.tractusx.ssi.lib.proof.SignatureType;
 import org.springframework.data.domain.Page;
@@ -631,4 +629,18 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
 
         return filter(filterRequest);
     }
+
+  public void credentialsRevoke(Map<String, Object> data) {
+    VerifiableCredential verifiableCredential = new VerifiableCredential(data);
+
+    Validate.isNull(verifiableCredential.getVerifiableCredentialStatus())
+            .launch(new CredentialNotFoundProblem("Credential Status is not exists"));
+
+    revocationService.revokeCredential(
+            (VerifiableCredentialStatusList2021Entry)
+                    verifiableCredential.getVerifiableCredentialStatus());
+    log.debug(
+            "VC revoked with id ->{}",
+            StringEscapeUtils.escapeJava(String.valueOf(verifiableCredential.getId())));
+  }
 }
