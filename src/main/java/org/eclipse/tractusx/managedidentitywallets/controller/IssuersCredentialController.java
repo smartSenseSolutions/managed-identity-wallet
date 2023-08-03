@@ -63,6 +63,8 @@ public class IssuersCredentialController extends BaseController {
      */
     public static final String API_TAG_VERIFIABLE_CREDENTIAL_VALIDATION = "Verifiable Credential - Validation";
 
+    public static final String API_TAG_VERIFIABLE_CREDENTIAL_REVOKE = "Verifiable Credential - Revoke";
+
     private final IssuersCredentialService issuersCredentialService;
 
 
@@ -1200,5 +1202,53 @@ public class IssuersCredentialController extends BaseController {
                                                                                @Parameter(description = "true if you want issue revocable credentials. Default will be false") @RequestParam(name = "revocable", required = false, defaultValue = "false") boolean revocable, @RequestBody Map<String, Object> data, Principal principal) {
         return ResponseEntity.status(HttpStatus.CREATED).body(issuersCredentialService.issueCredentialUsingBaseWallet(holderDid, revocable, data, getBPNFromToken(principal)));
 
+    }
+
+    @Tag(name = API_TAG_VERIFIABLE_CREDENTIAL_REVOKE)
+    @Operation(summary = "Revoke Verifiable Credentials", description = "Permission: **update_wallets** OR **update_wallet** (The BPN of the issuer of the Verifiable Credential must equal BPN of caller) \n\n Revoke Verifiable Credentials")
+    @PostMapping(path = RestURI.CREDENTIALS_REVOKE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+
+    @io.swagger.v3.oas.annotations.parameters.RequestBody(content = {
+            @Content(examples = @ExampleObject("""
+                                {
+                                    "issuanceDate": "2023-08-03T06:25:08Z",
+                                    "credentialSubject": [
+                                      {
+                                        "name": "Sample Bank",
+                                        "accountNumber": "4567231458"
+                                      }
+                                    ],
+                                    "id": "did:web:localhost:BPNL000000000000#983376f8-15bf-47f6-8b43-26e8f63a97f2",
+                                    "proof": {
+                                      "proofPurpose": "proofPurpose",
+                                      "verificationMethod": "did:web:localhost:BPNL000000000000#",
+                                      "type": "JsonWebSignature2020",
+                                      "created": "2023-08-03T06:25:11Z",
+                                      "jws": "eyJhbGciOiJFZERTQSJ9..Zbrle0VMVc2u0BZiI5C5lPo2yIIm4BrhgwzZwS2DFGaCG7rIm1R4LBHSg6kRdp_1x23uVajUv-j5a-PSLoSQCA"
+                                    },
+                                    "type": [
+                                      "VerifiableCredential",
+                                      "BankAccountCredential"
+                                    ],
+                                    "@context": [
+                                      "https://www.w3.org/2018/credentials/v1",
+                                      "https://w3id.org/security/suites/jws-2020/v1",
+                                      "https://w3id.org/vc/status-list/2021/v1"
+                                    ],
+                                    "issuer": "did:web:localhost:BPNL000000000000",
+                                    "expirationDate": "2019-06-17T18:56:59Z",
+                                    "credentialStatus": {
+                                      "type": "StatusList2021Entry",
+                                      "id": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation#1",
+                                      "statusPurpose": "revocation",
+                                      "statusListIndex": "1",
+                                      "statusListCredential": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation"
+                                    }
+                                  }
+                    """))
+    })
+    public ResponseEntity<Object> credentialsRevoke(@RequestBody Map<String, Object> data) {
+        issuersCredentialService.credentialsRevoke(data);
+        return ResponseEntity.status(HttpStatus.OK).build();
     }
 }
