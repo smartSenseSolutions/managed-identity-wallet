@@ -1057,6 +1057,7 @@ public class IssuersCredentialController extends BaseController {
         return ResponseEntity.status(HttpStatus.OK).body(issuersCredentialService.credentialsValidation(data, withCredentialExpiryDate, withRevocation));
     }
 
+
     /**
      * Issue credential response entity.
      *
@@ -1158,7 +1159,6 @@ public class IssuersCredentialController extends BaseController {
     @io.swagger.v3.oas.annotations.parameters.RequestBody(content = {
             @Content(examples = @ExampleObject("""
                                 {
-<<<<<<< HEAD
                                   "@context": [
                                     "https://www.w3.org/2018/credentials/v1",
                                     "https://catenax-ng.github.io/product-core-schemas/businessPartnerData.json",
@@ -1179,22 +1179,6 @@ public class IssuersCredentialController extends BaseController {
                                       "type": "BpnCredential"
                                     }
                                   ]
-=======
-                                      "id": "http://example.edu/credentials/333",
-                                      "@context": [
-                                        "https://www.w3.org/2018/credentials/v1"
-                                      ],
-                                      "type": [
-                                        "VerifiableCredential", "BankAccountCredential"
-                                      ],
-                                      "issuer": "did:example:76e12ec712ebc6f1c221ebfeb1f",
-                                      "issuanceDate": "2019-06-16T18:56:59Z",
-                                      "expirationDate": "2019-06-17T18:56:59Z",
-                                      "credentialSubject": [{
-                                        "name": "Sample Bank",
-                                        "accountNumber":"4567231458"
-                                      }]
->>>>>>> 6017c58 (feat: CGD-310: validate VC with revocation and test case)
                                 }
                     """))
     })

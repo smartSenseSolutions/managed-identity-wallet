@@ -131,7 +131,8 @@ jacocoTestCoverageVerification {
                     "org/eclipse/tractusx/managedidentitywallets/dto/*",
                     "org/eclipse/tractusx/managedidentitywallets/dao/entity/*",
                     "org/eclipse/tractusx/managedidentitywallets/constant/*",
-                    "org/eclipse/tractusx/managedidentitywallets/exception/*"
+                    "org/eclipse/tractusx/managedidentitywallets/exception/*",
+                    "org/eclipse/tractusx/managedidentitywallets/revocation/model/*"
             ])
         }))
     }

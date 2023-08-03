@@ -95,7 +95,6 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
 
     private final RevocationService revocationService;
 
-
     /**
      * Instantiates a new Issuers credential service.
      *
@@ -595,7 +594,6 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
                 StringPool.CONTRACT_TEMPLATE, miwSettings.contractTemplatesUrl()));
 
         List<String> types = List.of(VerifiableCredentialType.VERIFIABLE_CREDENTIAL, MIWVerifiableCredentialType.SUMMARY_CREDENTIAL);
-
         VerifiableCredential vc =
                 new VerifiableCredentialBuilder()
                         .id(URI.create(issuerDidDocument.getId() + "#" + URI.create(UUID.randomUUID().toString())))

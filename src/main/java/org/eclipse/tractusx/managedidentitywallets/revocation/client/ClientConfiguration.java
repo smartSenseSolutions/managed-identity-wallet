@@ -39,7 +39,6 @@ public class ClientConfiguration {
 
     @Bean
     public RequestInterceptor apiKeyRequestInterceptor() {
-        return template -> template.header("X-API-KEY",
-                String.format(apiKey));
+        return template -> template.header("X-API-KEY", String.format(apiKey));
     }
 }
