@@ -8,20 +8,21 @@ To run MIW locally, this section describes the tooling as well as the local deve
 
 There are two possible flows, which can be used for development:
 
-1. **local**: Run the postgresql and keycloak server inside docker. Start MIW from within your IDE (recommended for actual development)
+1. **local**: Run the postgresql and keycloak server inside docker. Start MIW from within your IDE (recommended for
+   actual development)
 2. **docker**: Run everything inside docker (use to test or check behavior inside a docker environment)
 
 ## Tooling
 
 Following tools the MIW development team used successfully:
 
-| Area     | Tool     | Download Link                                   | Comment                                                                                             |
-| -------- | -------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Area     | Tool     | Download Link                                   | Comment                                                                                          |
+|----------|----------|-------------------------------------------------|--------------------------------------------------------------------------------------------------|
 | IDE      | IntelliJ | https://www.jetbrains.com/idea/download/        | Use[envfile plugin](https://plugins.jetbrains.com/plugin/7861-envfile) to use the **local** flow |
-| Build    | Gradle   | https://gradle.org/install/                     |                                                                                                     |
-| Runtime  | Docker   | https://www.docker.com/products/docker-desktop/ |                                                                                                     |
-| Database | DBeaver  | https://dbeaver.io/                             |                                                                                                     |
-| IAM      | Keycloak | https://www.keycloak.org/                       |                                                                                                     |
+| Build    | Gradle   | https://gradle.org/install/                     |                                                                                                  |
+| Runtime  | Docker   | https://www.docker.com/products/docker-desktop/ |                                                                                                  |
+| Database | DBeaver  | https://dbeaver.io/                             |                                                                                                  |
+| IAM      | Keycloak | https://www.keycloak.org/                       |                                                                                                  |
 
 # Administrator Documentation
 
@@ -51,61 +52,58 @@ The available scopes/roles are:
 1. Role `add_wallets` to create a new wallet
 2. Role `view_wallets`:
 
-   * to get a list of all wallets
-   * to retrieve one wallet by its identifier
-   * to validate a Verifiable Credential
-   * to validate a Verifiable Presentation
-   * to get all stored Verifiable Credentials
+    * to get a list of all wallets
+    * to retrieve one wallet by its identifier
+    * to validate a Verifiable Credential
+    * to validate a Verifiable Presentation
+    * to get all stored Verifiable Credentials
 3. Role `update_wallets` for the following actions:
 
-   * to store Verifiable Credential
-   * to issue a Verifiable Credential
-   * to issue a Verifiable Presentation
+    * to store Verifiable Credential
+    * to issue a Verifiable Credential
+    * to issue a Verifiable Presentation
 4. Role `update_wallet`:
 
-   * to remove a Verifiable Credential
-   * to store a Verifiable Credential
-   * to issue a Verifiable Credential
-   * to issue a Verifiable Presentation
+    * to remove a Verifiable Credential
+    * to store a Verifiable Credential
+    * to issue a Verifiable Credential
+    * to issue a Verifiable Presentation
 5. Role `view_wallet` requires the BPN of Caller and it can be used:
-
-   * to get the Wallet of the related BPN
-   * to get stored Verifiable Credentials of the related BPN
-   * to validate any Verifiable Credential
-   * to validate any Verifiable Presentation
-6. Role `manage_app` used to change the log level of the application at runtime. Check Logging in the application section for more
-   details
+    * to get the Wallet of the related BPN
+    * to get stored Verifiable Credentials of the related BPN
+    * to validate any Verifiable Credential
+    * to validate any Verifiable Presentation
+6. Role `manage_app` used to change the log level of the application at runtime. Check Logging in the application
+   section for more
 
 Overview by Endpoint
 
-| Artefact                                        | CRUD   | HTTP Verb/ Request | Endpoint                              | Roles                                                    | Constraints                                                      |
-| ----------------------------------------------- | ------ | ------------------ | ------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------- |
-| **Wallets**                               | Read   | GET                | /api/wallets                          | **view_wallets**                                   |                                                                  |
-| **Wallets**                               | Create | POST               | /api/wallets                          | **add_wallets**                                    | **1 BPN : 1 WALLET**(PER ONE [1] BPN ONLY ONE [1] WALLET!) |
-| **Wallets**                               | Create | POST               | /api/wallets/{identifier}/credentials | **update_wallets** <br />OR**update_wallet** |                                                                  |
-| **Wallets**                               | Read   | GET                | /api/wallets/{identifier}             | **view_wallets**OR<br />**view_wallet**      |                                                                  |
-| **Verifiable Presentations - Generation** | Create | POST               | /api/presentation                     | **update_wallets**OR<br />**update_wallet**  |                                                                  |
-| **Verifiable Presentations - Validation** | Create | POST               | /api/presentations/validation         | **view_wallets**OR<br />**view_wallet**      |                                                                  |
-| **Verifiable Credential - Holder**        | Read   | GET                | /api/credentials                      | **view_wallets**OR<br />**view_wallet**      |                                                                  |
-| **Verifiable Credential - Holder**        | Create | POST               | /api/credentials                      | **update_wallet**OR<br />**update_wallet**   |                                                                  |
-| **Verifiable Credential - Holder**        | Delete | DELETE             | /api/credentials                      | **update_wallet**                                  |                                                                  |
-| **Verfiable Credential - Validation**     | Create | POST               | /api/credentials/validation           | **view_wallets**OR<br />**view_wallet**      |                                                                  |
-| **Verfiable Credential - Issuer**         | Read   | GET                | /api/credentials/issuer               | **view_wallets**                                   |                                                                  |
-| **Verfiable Credential - Issuer**         | Create | POST               | /api/credentials/issuer               | **update_wallets**                                 |                                                                  |
-| **Verfiable Credential - Issuer**         | Create | POST               | /api/credentials/issuer/membership    | **update_wallets**                                 |                                                                  |
-| **Verfiable Credential - Issuer**         | Create | POST               | /api/credentials/issuer/framework     | **update_wallets**                                 |                                                                  |
-| **Verfiable Credential - Issuer**         | Create | POST               | /api/credentials/issuer/distmantler   | **update_wallets**                                 |                                                                  |
-| **DIDDocument**                           | Read   | GET                | /{bpn}/did.json                       | N/A                                                      |                                                                  |
-| **DIDDocument**                           | Read   | GET                | /api/didDocuments/{identifier}        | N/A                                                      | `                                                                |
-
-
+| Artefact                                  | CRUD   | HTTP Verb/ Request | Endpoint                              | Roles                                        | Constraints                                                |
+|-------------------------------------------|--------|--------------------|---------------------------------------|----------------------------------------------|------------------------------------------------------------|
+| **Wallets**                               | Read   | GET                | /api/wallets                          | **view_wallets**                             |                                                            |
+| **Wallets**                               | Create | POST               | /api/wallets                          | **add_wallets**                              | **1 BPN : 1 WALLET**(PER ONE [1] BPN ONLY ONE [1] WALLET!) |
+| **Wallets**                               | Create | POST               | /api/wallets/{identifier}/credentials | **update_wallets** <br />OR**update_wallet** |                                                            |
+| **Wallets**                               | Read   | GET                | /api/wallets/{identifier}             | **view_wallets**OR<br />**view_wallet**      |                                                            |
+| **Verifiable Presentations - Generation** | Create | POST               | /api/presentation                     | **update_wallets**OR<br />**update_wallet**  |                                                            |
+| **Verifiable Presentations - Validation** | Create | POST               | /api/presentations/validation         | **view_wallets**OR<br />**view_wallet**      |                                                            |
+| **Verifiable Credential - Holder**        | Read   | GET                | /api/credentials                      | **view_wallets**OR<br />**view_wallet**      |                                                            |
+| **Verifiable Credential - Holder**        | Create | POST               | /api/credentials                      | **update_wallet**OR<br />**update_wallet**   |                                                            |
+| **Verifiable Credential - Holder**        | Delete | DELETE             | /api/credentials                      | **update_wallet**                            |                                                            |
+| **Verfiable Credential - Validation**     | Create | POST               | /api/credentials/validation           | **view_wallets**OR<br />**view_wallet**      |                                                            |
+| **Verfiable Credential - Issuer**         | Read   | GET                | /api/credentials/issuer               | **view_wallets**                             |                                                            |
+| **Verfiable Credential - Issuer**         | Create | POST               | /api/credentials/issuer               | **update_wallets**                           |                                                            |
+| **Verfiable Credential - Issuer**         | Create | POST               | /api/credentials/issuer/membership    | **update_wallets**                           |                                                            |
+| **Verfiable Credential - Issuer**         | Create | POST               | /api/credentials/issuer/framework     | **update_wallets**                           |                                                            |
+| **Verfiable Credential - Issuer**         | Create | POST               | /api/credentials/issuer/distmantler   | **update_wallets**                           |                                                            |
+| **DIDDocument**                           | Read   | GET                | /{bpn}/did.json                       | N/A                                          |                                                            |
+| **DIDDocument**                           | Read   | GET                | /api/didDocuments/{identifier}        | N/A                                          | `                                                          |
 
 Additionally a Token mapper can be created under *Clients* &gt;
 *ManagedIdentityWallets* &gt; *Mappers* &gt; *create* with the following
 configuration (using as an example `BPNL000000001`):
 
 | Key                                | Value           |
-| ---------------------------------- | --------------- |
+|------------------------------------|-----------------|
 | Name                               | StaticBPN       |
 | Mapper Type                        | Hardcoded claim |
 | Token Claim Name                   | BPN             |
@@ -123,7 +121,8 @@ keycloak admin and within *Clients > Credentials* recreate the secret.
 
 ### Prerequisites
 
-To simplify the dev environment, [Taskfile](https://taskfile.dev) is used as a task executor. You have to install it first.
+To simplify the dev environment, [Taskfile](https://taskfile.dev) is used as a task executor. You have to install it
+first.
 
 > **IMPORTANT**: Before executing any of th tasks, you have to choose your flow (_local_ or _docker_). _local_ is
 > default.
@@ -143,7 +142,8 @@ Description of the env files:
   can remain as it is.
 
 > **IMPORTANT**: When you are using MacOS and the MIW docker container won't start up (stuck somewhere or doesn't start
-> at all), you can enable the docker-desktop feature "Use Rosetta for x86/amd64 emulation on Apple Silicon" in your Docker
+> at all), you can enable the docker-desktop feature "Use Rosetta for x86/amd64 emulation on Apple Silicon" in your
+> Docker
 > settings (under "features in development"). This should fix the issue.
 
 In both env files (env.local and env.docker) you need to set _GITHUB_USERNAME_ and _GITHUB_TOKEN_ in order to be able to
@@ -166,10 +166,16 @@ When you just run `task` without parameters, you will see all tasks available.
 
 ### local
 
-1. Run `task docker:start-middleware` and wait until it shows "(main) Running the server in development mode. DO NOT use this configuration in production." in the terminal
+1. Run `task docker:start-middleware` and wait until it shows "(main) Running the server in development mode. DO NOT use
+   this configuration in production." in the terminal
 2. Run `task app:build` to build the MIW application
-3. Run [ManagedIdentityWalletsApplication.java](src/main/java/org/eclipse/tractusx/managedidentitywallets/ManagedIdentityWalletsApplication.java) via IDE and use the local.env file to populate environment vars (e.g. EnvFile plugin for IntelliJ)
-4. Run `task app:get-token` and copy the token (including "BEARER" prefix) (Mac users have the token already in their clipboard :) )
+3.
+
+Run [ManagedIdentityWalletsApplication.java](src/main/java/org/eclipse/tractusx/managedidentitywallets/ManagedIdentityWalletsApplication.java)
+via IDE and use the local.env file to populate environment vars (e.g. EnvFile plugin for IntelliJ)
+
+4. Run `task app:get-token` and copy the token (including "BEARER" prefix) (Mac users have the token already in their
+   clipboard :) )
 5. Open API doc on http://localhost:8000 (or what port you configured in the _env.local_ file)
 6. Click on Authorize on swagger UI and on the dialog paste the token into the "value" input
 7. Click on "Authorize" and "close"
@@ -178,7 +184,8 @@ When you just run `task` without parameters, you will see all tasks available.
 ### docker
 
 1. Run `task docker:start-app` and wait until it shows " Started ManagedIdentityWalletsApplication in ... seconds"
-2. Run `task app:get-token` and copy the token (including "BEARER" prefix) (Mac users have the token already in their clipboard :) )
+2. Run `task app:get-token` and copy the token (including "BEARER" prefix) (Mac users have the token already in their
+   clipboard :) )
 3. Open API doc on http://localhost:8000 (or what port you configured in the _env.local_ file)
 4. Click on Authorize on swagger UI and on the dialog paste the token into the "value" input
 5. Click on "Authorize" and "close"
@@ -242,7 +249,7 @@ This process ensures that any issues with the database schema are resolved by re
 # Environment Variables `<a id= "environmentVariables"></a>`
 
 | name                            | description                                                                                  | default value                                                                                                                                       |
-| ------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+|---------------------------------|----------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
 | APPLICATION_PORT                | port number of application                                                                   | 8080                                                                                                                                                |
 | APPLICATION_ENVIRONMENT         | Environment of the application ie. local, dev, int and prod                                  | local                                                                                                                                               |
 | DB_HOST                         | Database host                                                                                | localhost                                                                                                                                           |
@@ -268,6 +275,9 @@ This process ensures that any issues with the database schema are resolved by re
 | ENFORCE_HTTPS_IN_DID_RESOLUTION | Enforce https during web did resolution                                                      | true                                                                                                                                                |
 | CONTRACT_TEMPLATES_URL          | Contract templates URL used in summary VC                                                    | https://public.catena-x.org/contracts/                                                                                                              |
 | APP_LOG_LEVEL                   | Log level of application                                                                     | INFO                                                                                                                                                |
+| REVOCATION_HOST                 | Host of revocation service                                                                   |                                                                                                                                                     |
+| REVOCATION_X_API_KEY            | Ay to access revocation service                                                              |                                                                                                                                                     |
+| REVOCATION_CONTEXT_URL          | Revocation VC context URL                                                                    | https://w3id.org/vc/status-list/2021/v1                                                                                                             |
 |                                 |                                                                                              |                                                                                                                                                     |
 
 # Technical Debts and Known issue

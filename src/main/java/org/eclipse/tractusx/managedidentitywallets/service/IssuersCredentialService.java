@@ -46,6 +46,7 @@ import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
 import org.eclipse.tractusx.managedidentitywallets.exception.CredentialNotFoundProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.DuplicateCredentialProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.ForbiddenException;
+import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
 import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistry;
 import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
@@ -92,6 +93,8 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
 
     private final CommonService commonService;
 
+    private final RevocationService revocationService;
+
 
     /**
      * Instantiates a new Issuers credential service.
@@ -102,16 +105,18 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * @param walletKeyService            the wallet key service
      * @param holdersCredentialRepository the holders credential repository
      * @param commonService               the common service
+     * @param revocationService           the revocation service
      */
     public IssuersCredentialService(IssuersCredentialRepository issuersCredentialRepository, MIWSettings miwSettings,
                                     SpecificationUtil<IssuersCredential> credentialSpecificationUtil,
-                                    WalletKeyService walletKeyService, HoldersCredentialRepository holdersCredentialRepository, CommonService commonService) {
+                                    WalletKeyService walletKeyService, HoldersCredentialRepository holdersCredentialRepository, CommonService commonService, RevocationService revocationService) {
         this.issuersCredentialRepository = issuersCredentialRepository;
         this.miwSettings = miwSettings;
         this.credentialSpecificationUtil = credentialSpecificationUtil;
         this.walletKeyService = walletKeyService;
         this.holdersCredentialRepository = holdersCredentialRepository;
         this.commonService = commonService;
+        this.revocationService = revocationService;
     }
 
 
@@ -424,6 +429,7 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * Issue credential using base wallet
      *
      * @param holderDid the holder did
+     * @param revocable the revocable
      * @param data      the data
      * @param callerBpn the caller bpn
      * @return the verifiable credential
@@ -472,6 +478,7 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      *
      * @param data                     the data
      * @param withCredentialExpiryDate the with credential expiry date
+     * @param withRevocation           the with revocation
      * @return the map
      */
     public Map<String, Object> credentialsValidation(Map<String, Object> data, boolean withCredentialExpiryDate, boolean withRevocation) {
@@ -630,17 +637,22 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
         return filter(filterRequest);
     }
 
-  public void credentialsRevoke(Map<String, Object> data) {
-    VerifiableCredential verifiableCredential = new VerifiableCredential(data);
+    /**
+     * Credentials revoke.
+     *
+     * @param data the data
+     */
+    public void credentialsRevoke(Map<String, Object> data) {
+        VerifiableCredential verifiableCredential = new VerifiableCredential(data);
 
-    Validate.isNull(verifiableCredential.getVerifiableCredentialStatus())
-            .launch(new CredentialNotFoundProblem("Credential Status is not exists"));
+        Validate.isNull(verifiableCredential.getVerifiableCredentialStatus())
+                .launch(new CredentialNotFoundProblem("Credential Status is not exists"));
 
-    revocationService.revokeCredential(
-            (VerifiableCredentialStatusList2021Entry)
-                    verifiableCredential.getVerifiableCredentialStatus());
-    log.debug(
-            "VC revoked with id ->{}",
-            StringEscapeUtils.escapeJava(String.valueOf(verifiableCredential.getId())));
-  }
+        revocationService.revokeCredential(
+                (VerifiableCredentialStatusList2021Entry)
+                        verifiableCredential.getVerifiableCredentialStatus());
+        log.debug(
+                "VC revoked with id ->{}",
+                StringEscapeUtils.escapeJava(String.valueOf(verifiableCredential.getId())));
+    }
 }

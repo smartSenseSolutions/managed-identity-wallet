@@ -87,6 +87,8 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
 
     private final MIWSettings miwSettings;
 
+    private final ObjectMapper objectMapper;
+
     @Override
     protected BaseRepository<HoldersCredential, Long> getRepository() {
         return holdersCredentialRepository;
@@ -193,9 +195,8 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
             boolean validCredential = true;
             boolean validateExpiryDate = true;
             try {
-                ObjectMapper mapper = new ObjectMapper();
-                Map<String, Object> claims = mapper.readValue(signedJWT.getPayload().toBytes(), Map.class);
-                String vpClaim = mapper.writeValueAsString(claims.get("vp"));
+                Map<String, Object> claims = objectMapper.readValue(signedJWT.getPayload().toBytes(), Map.class);
+                String vpClaim = objectMapper.writeValueAsString(claims.get("vp"));
 
                 JsonLdSerializerImpl jsonLdSerializer = new JsonLdSerializerImpl();
                 VerifiablePresentation presentation = jsonLdSerializer.deserializePresentation(new SerializedVerifiablePresentation(vpClaim));
