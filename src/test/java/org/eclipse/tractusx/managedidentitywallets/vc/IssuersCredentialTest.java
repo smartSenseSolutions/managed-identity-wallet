@@ -23,6 +23,7 @@ package org.eclipse.tractusx.managedidentitywallets.vc;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.teketik.test.mockinbean.MockInBean;
 import org.eclipse.tractusx.managedidentitywallets.ManagedIdentityWalletsApplication;
 import org.eclipse.tractusx.managedidentitywallets.config.MIWSettings;
 import org.eclipse.tractusx.managedidentitywallets.config.TestContextInitializer;
@@ -36,17 +37,18 @@ import org.eclipse.tractusx.managedidentitywallets.dao.repository.IssuersCredent
 import org.eclipse.tractusx.managedidentitywallets.dao.repository.WalletRepository;
 import org.eclipse.tractusx.managedidentitywallets.dto.CreateWalletRequest;
 import org.eclipse.tractusx.managedidentitywallets.dto.IssueFrameworkCredentialRequest;
+import org.eclipse.tractusx.managedidentitywallets.revocation.client.RevocationClient;
+import org.eclipse.tractusx.managedidentitywallets.revocation.model.StatusEntryRequest;
+import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.AuthenticationUtils;
 import org.eclipse.tractusx.managedidentitywallets.utils.TestUtils;
 import org.eclipse.tractusx.ssi.lib.did.web.DidWebFactory;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialBuilder;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialSubject;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialType;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -74,6 +76,9 @@ class IssuersCredentialTest {
 
     @Autowired
     private IssuersCredentialRepository issuersCredentialRepository;
+
+    @MockInBean(RevocationService.class)
+    private RevocationClient revocationClient;
 
 
     @Test
@@ -199,6 +204,70 @@ class IssuersCredentialTest {
         ResponseEntity<String> response = issueVC(bpn, did, miwSettings.authorityWalletDid(), MIWVerifiableCredentialType.SUMMARY_CREDENTIAL, headers);
 
         Assertions.assertEquals(HttpStatus.BAD_REQUEST.value(), response.getStatusCode().value());
+    }
+
+    @Test
+    void issueRevocableVCTest() throws JsonProcessingException {
+        String bpn = UUID.randomUUID().toString();
+        String did = DidWebFactory.fromHostnameAndPath(miwSettings.host(), bpn).toString();
+        String type = "TestCredential";
+        String issuerDid = miwSettings.authorityWalletDid();
+
+        //save wallet
+        TestUtils.createWallet(bpn, did, restTemplate);
+
+        // Create VC without proof
+        //VC Bulider
+        VerifiableCredentialBuilder verifiableCredentialBuilder =
+                new VerifiableCredentialBuilder();
+
+        //VC Subject
+        VerifiableCredentialSubject verifiableCredentialSubject =
+                new VerifiableCredentialSubject(Map.of("test", "test"));
+
+        //Using Builder
+        VerifiableCredential credentialWithoutProof =
+                verifiableCredentialBuilder
+                        .id(URI.create(issuerDid + "#" + UUID.randomUUID()))
+                        .context(miwSettings.vcContexts())
+                        .type(List.of(VerifiableCredentialType.VERIFIABLE_CREDENTIAL, type))
+                        .issuer(URI.create(issuerDid)) //issuer must be base wallet
+                        .expirationDate(miwSettings.vcExpiryDate().toInstant())
+                        .issuanceDate(Instant.now())
+                        .credentialSubject(verifiableCredentialSubject)
+                        .build();
+
+        Map<String, Objects> map = objectMapper.readValue(credentialWithoutProof.toJson(), Map.class);
+
+        Map<String, Object> statusMap = new HashMap<>();
+        statusMap.put(VerifiableCredentialStatusList2021Entry.TYPE, "StatusList2021Entry");
+        statusMap.put(VerifiableCredentialStatusList2021Entry.ID, "http://localhost:8085/api/v1/revocations/credentials/did-revocation#0");
+        statusMap.put(VerifiableCredentialStatusList2021Entry.STATUS_PURPOSE, "revocation");
+        statusMap.put(VerifiableCredentialStatusList2021Entry.STATUS_LIST_INDEX, "1");
+        statusMap.put(VerifiableCredentialStatusList2021Entry.STATUS_LIST_CREDENTIAL, "http://localhost:8085/api/v1/revocations/credentials/did-revocation");
+
+        //mock revocation service
+        Mockito.when(revocationClient.statusEntry(Mockito.anyString(), Mockito.any(StatusEntryRequest.class))).thenReturn(statusMap);
+
+        //issue Revocable VC
+        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(miwSettings.authorityWalletBpn());
+        HttpEntity<Map> entity = new HttpEntity<>(map, headers);
+        ResponseEntity<String> response = restTemplate.exchange(RestURI.ISSUERS_CREDENTIALS + "?holderDid={did}&revocable={revocable}", HttpMethod.POST, entity, String.class, did, true);
+        Assertions.assertEquals(HttpStatus.CREATED.value(), response.getStatusCode().value());
+        VerifiableCredential verifiableCredential = new VerifiableCredential(objectMapper.readValue(response.getBody(), Map.class));
+
+        //check status list
+        Assertions.assertNotNull(verifiableCredential.getVerifiableCredentialStatus());
+        VerifiableCredentialStatusList2021Entry verifiableCredentialStatus = (VerifiableCredentialStatusList2021Entry) verifiableCredential.getVerifiableCredentialStatus();
+
+        //check status list values
+        Assertions.assertEquals(verifiableCredentialStatus.getId().toString(), statusMap.get(VerifiableCredentialStatusList2021Entry.ID).toString());
+        Assertions.assertEquals(verifiableCredentialStatus.getType(), statusMap.get(VerifiableCredentialStatusList2021Entry.TYPE).toString());
+        Assertions.assertEquals(verifiableCredentialStatus.getStatusPurpose(), statusMap.get(VerifiableCredentialStatusList2021Entry.STATUS_PURPOSE).toString());
+        Assertions.assertEquals(verifiableCredentialStatus.getStatusListIndex(), Integer.parseInt(statusMap.get(VerifiableCredentialStatusList2021Entry.STATUS_LIST_INDEX).toString()));
+        Assertions.assertEquals(verifiableCredentialStatus.getStatusListCredential().toString(), statusMap.get(VerifiableCredentialStatusList2021Entry.STATUS_LIST_CREDENTIAL).toString());
+
+        Mockito.reset(revocationClient);
     }
 
     @Test

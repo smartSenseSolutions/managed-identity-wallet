@@ -235,18 +235,20 @@ public class IssuersCredentialController extends BaseController {
                                         "https://www.w3.org/2018/credentials/examples/v1"
                                       ],
                                       "type": [
-                                        "VerifiableCredential", "University-Degree-Credential"
+                                        "VerifiableCredential", "BankAccountCredential"
                                       ],
                                       "issuer": "did:example:76e12ec712ebc6f1c221ebfeb1f",
                                       "issuanceDate": "2019-06-16T18:56:59Z",
                                       "expirationDate": "2019-06-17T18:56:59Z",
                                       "credentialSubject": [{
-                                        "college": "Test-University"
+                                        "name": "Sample Bank",
+                                        "accountNumber":"4567231458"
                                       }]
                                 }
                     """))
     })
-    public ResponseEntity<VerifiableCredential> issueCredentialUsingBaseWallet(@RequestParam String holderDid, @RequestBody Map<String, Object> data, Principal principal) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(issuersCredentialService.issueCredentialUsingBaseWallet(holderDid, data, getBPNFromToken(principal)));
+    public ResponseEntity<VerifiableCredential> issueCredentialUsingBaseWallet(@Parameter(description = "holder did") @RequestParam String holderDid,
+                                                                               @Parameter(description = "true if you want issue revocable credentials. Default will be false") @RequestParam(name = "revocable", required = false, defaultValue = "false") boolean revocable, @RequestBody Map<String, Object> data, Principal principal) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(issuersCredentialService.issueCredentialUsingBaseWallet(holderDid, revocable, data, getBPNFromToken(principal)));
     }
 }

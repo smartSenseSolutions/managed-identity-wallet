@@ -45,7 +45,7 @@ import org.eclipse.tractusx.managedidentitywallets.dto.IssueMembershipCredential
 import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
 import org.eclipse.tractusx.managedidentitywallets.exception.DuplicateCredentialProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.ForbiddenException;
-import org.eclipse.tractusx.managedidentitywallets.utils.CommonUtils;
+import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
 import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistry;
 import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
@@ -53,6 +53,7 @@ import org.eclipse.tractusx.ssi.lib.did.web.DidWebDocumentResolver;
 import org.eclipse.tractusx.ssi.lib.did.web.util.DidWebParser;
 import org.eclipse.tractusx.ssi.lib.model.did.DidDocument;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialBuilder;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialSubject;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialType;
 import org.eclipse.tractusx.ssi.lib.proof.LinkedDataProofValidation;
@@ -66,6 +67,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
+import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Instant;
 import java.util.*;
@@ -93,6 +95,8 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
 
     private final CommonService commonService;
 
+    private final RevocationService revocationService;
+
     /**
      * Instantiates a new Issuers credential service.
      *
@@ -102,16 +106,18 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * @param walletKeyService            the wallet key service
      * @param holdersCredentialRepository the holders credential repository
      * @param commonService               the common service
+     * @param revocationService
      */
     public IssuersCredentialService(IssuersCredentialRepository issuersCredentialRepository, MIWSettings miwSettings,
                                     SpecificationUtil<IssuersCredential> credentialSpecificationUtil,
-                                    WalletKeyService walletKeyService, HoldersCredentialRepository holdersCredentialRepository, CommonService commonService) {
+                                    WalletKeyService walletKeyService, HoldersCredentialRepository holdersCredentialRepository, CommonService commonService, RevocationService revocationService) {
         this.issuersCredentialRepository = issuersCredentialRepository;
         this.miwSettings = miwSettings;
         this.credentialSpecificationUtil = credentialSpecificationUtil;
         this.walletKeyService = walletKeyService;
         this.holdersCredentialRepository = holdersCredentialRepository;
         this.commonService = commonService;
+        this.revocationService = revocationService;
     }
 
 
@@ -195,8 +201,20 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
         VerifiableCredentialSubject verifiableCredentialSubject = new VerifiableCredentialSubject(Map.of(StringPool.TYPE, MIWVerifiableCredentialType.BPN_CREDENTIAL,
                 StringPool.ID, holderWallet.getDid(),
                 StringPool.BPN, holderWallet.getBpn()));
-        HoldersCredential holdersCredential = CommonUtils.getHoldersCredential(verifiableCredentialSubject,
-                types, baseWallet.getDidDocument(), privateKeyBytes, holderWallet.getDid(), miwSettings.vcContexts(), miwSettings.vcExpiryDate(), authority);
+
+        VerifiableCredential vc =
+                new VerifiableCredentialBuilder()
+                        .id(URI.create(baseWallet.getDidDocument().getId() + "#" + URI.create(UUID.randomUUID().toString())))
+                        .credentialSubject(verifiableCredentialSubject)
+                        .context(miwSettings.vcContexts())
+                        .type(types)
+                        .issuer(baseWallet.getDidDocument().getId())
+                        .issuanceDate(Instant.now())
+                        .expirationDate(miwSettings.vcExpiryDate().toInstant())
+                        .build();
+
+
+        HoldersCredential holdersCredential = commonService.getHoldersCredential(vc, baseWallet.getDidDocument(), privateKeyBytes, holderWallet.getDid(), authority);
 
         //Store Credential in holder wallet
         holdersCredential = holdersCredentialRepository.save(holdersCredential);
@@ -245,7 +263,20 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
                 StringPool.CONTRACT_TEMPLATE, request.getContractTemplate(),
                 StringPool.CONTRACT_VERSION, request.getContractVersion()));
         List<String> types = List.of(VerifiableCredentialType.VERIFIABLE_CREDENTIAL, MIWVerifiableCredentialType.USE_CASE_FRAMEWORK_CONDITION);
-        HoldersCredential holdersCredential = CommonUtils.getHoldersCredential(subject, types, baseWallet.getDidDocument(), privateKeyBytes, holderWallet.getDid(), miwSettings.vcContexts(), miwSettings.vcExpiryDate(), isSelfIssued);
+
+
+        VerifiableCredential vc =
+                new VerifiableCredentialBuilder()
+                        .id(URI.create(baseWallet.getDidDocument().getId() + "#" + URI.create(UUID.randomUUID().toString())))
+                        .credentialSubject(subject)
+                        .context(miwSettings.vcContexts())
+                        .type(types)
+                        .issuer(baseWallet.getDidDocument().getId())
+                        .issuanceDate(Instant.now())
+                        .expirationDate(miwSettings.vcExpiryDate().toInstant())
+                        .build();
+
+        HoldersCredential holdersCredential = commonService.getHoldersCredential(vc, baseWallet.getDidDocument(), privateKeyBytes, holderWallet.getDid(), isSelfIssued);
 
         //save in holder wallet
         holdersCredential = holdersCredentialRepository.save(holdersCredential);
@@ -295,8 +326,21 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
                 StringPool.ACTIVITY_TYPE, request.getActivityType(),
                 StringPool.ALLOWED_VEHICLE_BRANDS, request.getAllowedVehicleBrands() == null ? Collections.emptySet() : request.getAllowedVehicleBrands()));
         List<String> types = List.of(VerifiableCredentialType.VERIFIABLE_CREDENTIAL, MIWVerifiableCredentialType.DISMANTLER_CREDENTIAL);
-        HoldersCredential holdersCredential = CommonUtils.getHoldersCredential(subject, types, issuerWallet.getDidDocument(), privateKeyBytes, holderWallet.getDid(), miwSettings.vcContexts(), miwSettings.vcExpiryDate(), isSelfIssued);
 
+
+        VerifiableCredential vc =
+                new VerifiableCredentialBuilder()
+                        .id(URI.create(issuerWallet.getDidDocument().getId() + "#" + URI.create(UUID.randomUUID().toString())))
+                        .credentialSubject(subject)
+                        .context(miwSettings.vcContexts())
+                        .type(types)
+                        .issuer(issuerWallet.getDidDocument().getId())
+                        .issuanceDate(Instant.now())
+                        .expirationDate(miwSettings.vcExpiryDate().toInstant())
+                        .build();
+
+
+        HoldersCredential holdersCredential = commonService.getHoldersCredential(vc, issuerWallet.getDidDocument(), privateKeyBytes, holderWallet.getDid(), isSelfIssued);
 
         //save in holder wallet
         holdersCredential = holdersCredentialRepository.save(holdersCredential);
@@ -348,7 +392,20 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
                 StringPool.MEMBER_OF, issuerWallet.getName(),
                 StringPool.STATUS, "Active",
                 StringPool.START_TIME, Instant.now().toString()));
-        HoldersCredential holdersCredential = CommonUtils.getHoldersCredential(verifiableCredentialSubject, types, issuerWallet.getDidDocument(), privateKeyBytes, holderWallet.getDid(), miwSettings.vcContexts(), miwSettings.vcExpiryDate(), isSelfIssued);
+
+        VerifiableCredential vc =
+                new VerifiableCredentialBuilder()
+                        .id(URI.create(issuerWallet.getDidDocument().getId() + "#" + URI.create(UUID.randomUUID().toString())))
+                        .credentialSubject(verifiableCredentialSubject)
+                        .context(miwSettings.vcContexts())
+                        .type(types)
+                        .issuer(issuerWallet.getDidDocument().getId())
+                        .issuanceDate(Instant.now())
+                        .expirationDate(miwSettings.vcExpiryDate().toInstant())
+                        .build();
+
+
+        HoldersCredential holdersCredential = commonService.getHoldersCredential(vc, issuerWallet.getDidDocument(), privateKeyBytes, holderWallet.getDid(), isSelfIssued);
 
 
         //save in holder wallet
@@ -378,7 +435,7 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * @return the verifiable credential
      */
     @Transactional(isolation = Isolation.READ_UNCOMMITTED, propagation = Propagation.REQUIRED)
-    public VerifiableCredential issueCredentialUsingBaseWallet(String holderDid, Map<String, Object> data, String callerBpn) {
+    public VerifiableCredential issueCredentialUsingBaseWallet(String holderDid, boolean revocable, Map<String, Object> data, String callerBpn) {
         //Fetch Holder Wallet
         Wallet holderWallet = commonService.getWalletByIdentifier(holderDid);
 
@@ -396,12 +453,11 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
 
         boolean isSelfIssued = isSelfIssued(holderWallet.getBpn());
 
+        //set random ID
+        verifiableCredential.put(VerifiableCredential.ID, URI.create(issuerWallet.getDidDocument().getId() + "#" + URI.create(UUID.randomUUID().toString())));
+
         // Create Credential
-        HoldersCredential holdersCredential = CommonUtils.getHoldersCredential(verifiableCredential.getCredentialSubject().get(0),
-                verifiableCredential.getTypes(), issuerWallet.getDidDocument(),
-                privateKeyBytes,
-                holderWallet.getDid(),
-                verifiableCredential.getContext(), Date.from(verifiableCredential.getExpirationDate()), isSelfIssued);
+        HoldersCredential holdersCredential = commonService.getHoldersCredential(verifiableCredential, issuerWallet.getDidDocument(), privateKeyBytes, holderWallet.getDid(), isSelfIssued, revocable);
 
 
         //save in holder wallet
@@ -426,7 +482,6 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      */
     public Map<String, Object> credentialsValidation(Map<String, Object> data, boolean withCredentialExpiryDate) {
         VerifiableCredential verifiableCredential = new VerifiableCredential(data);
-
         // DID Resolver Constracture params
         DidDocumentResolverRegistry didDocumentResolverRegistry = new DidDocumentResolverRegistryImpl();
         didDocumentResolverRegistry.register(
@@ -535,10 +590,19 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
                 StringPool.CONTRACT_TEMPLATE, miwSettings.contractTemplatesUrl()));
 
         List<String> types = List.of(VerifiableCredentialType.VERIFIABLE_CREDENTIAL, MIWVerifiableCredentialType.SUMMARY_CREDENTIAL);
-        HoldersCredential holdersCredential = CommonUtils.getHoldersCredential(subject, types,
-                issuerDidDocument,
-                issuerPrivateKey,
-                holderDid, miwSettings.summaryVcContexts(), miwSettings.vcExpiryDate(), isSelfIssued);
+        
+        VerifiableCredential vc =
+                new VerifiableCredentialBuilder()
+                        .id(URI.create(issuerDidDocument.getId() + "#" + URI.create(UUID.randomUUID().toString())))
+                        .credentialSubject(subject)
+                        .context(miwSettings.summaryVcContexts())
+                        .type(types)
+                        .issuer(issuerDidDocument.getId())
+                        .issuanceDate(Instant.now())
+                        .expirationDate(miwSettings.vcExpiryDate().toInstant())
+                        .build();
+
+        HoldersCredential holdersCredential = commonService.getHoldersCredential(vc, issuerDidDocument, issuerPrivateKey, holderDid, isSelfIssued);
 
 
         //save in holder wallet
