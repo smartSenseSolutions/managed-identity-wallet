@@ -8,7 +8,8 @@ To run MIW locally, this section describes the tooling as well as the local deve
 
 There are two possible flows, which can be used for development:
 
-1. **local**: Run the postgresql and keycloak server inside docker. Start MIW from within your IDE (recommended for actual development)
+1. **local**: Run the postgresql and keycloak server inside docker. Start MIW from within your IDE (recommended for
+   actual development)
 2. **docker**: Run everything inside docker (use to test or check behavior inside a docker environment)
 
 ## Tooling
@@ -73,7 +74,8 @@ The available scopes/roles are:
     * to get stored Verifiable Credentials of the related BPN
     * to validate any Verifiable Credential
     * to validate any Verifiable Presentation
-6. Role `manage_app` used to change the log level of the application at runtime. Check Logging in the application section for more
+6. Role `manage_app` used to change the log level of the application at runtime. Check Logging in the application
+   section for more
    details
 
 Additionally a Token mapper can be created under *Clients* &gt;
@@ -99,7 +101,8 @@ keycloak admin and within *Clients > Credentials* recreate the secret.
 
 ### Prerequisites
 
-To simplify the dev environment, [Taskfile](https://taskfile.dev) is used as a task executor. You have to install it first.
+To simplify the dev environment, [Taskfile](https://taskfile.dev) is used as a task executor. You have to install it
+first.
 
 > **IMPORTANT**: Before executing any of th tasks, you have to choose your flow (_local_ or _docker_). _local_ is
 > default.
@@ -119,7 +122,8 @@ Description of the env files:
   can remain as it is.
 
 > **IMPORTANT**: When you are using MacOS and the MIW docker container won't start up (stuck somewhere or doesn't start
-> at all), you can enable the docker-desktop feature "Use Rosetta for x86/amd64 emulation on Apple Silicon" in your Docker
+> at all), you can enable the docker-desktop feature "Use Rosetta for x86/amd64 emulation on Apple Silicon" in your
+> Docker
 > settings (under "features in development"). This should fix the issue.
 
 In both env files (env.local and env.docker) you need to set _GITHUB_USERNAME_ and _GITHUB_TOKEN_ in order to be able to
@@ -142,10 +146,16 @@ When you just run `task` without parameters, you will see all tasks available.
 
 ### local
 
-1. Run `task docker:start-middleware` and wait until it shows "(main) Running the server in development mode. DO NOT use this configuration in production." in the terminal
+1. Run `task docker:start-middleware` and wait until it shows "(main) Running the server in development mode. DO NOT use
+   this configuration in production." in the terminal
 2. Run `task app:build` to build the MIW application
-3. Run [ManagedIdentityWalletsApplication.java](src/main/java/org/eclipse/tractusx/managedidentitywallets/ManagedIdentityWalletsApplication.java) via IDE and use the local.env file to populate environment vars (e.g. EnvFile plugin for IntelliJ)
-4. Run `task app:get-token` and copy the token (including "BEARER" prefix) (Mac users have the token already in their clipboard :) )
+3.
+
+Run [ManagedIdentityWalletsApplication.java](src/main/java/org/eclipse/tractusx/managedidentitywallets/ManagedIdentityWalletsApplication.java)
+via IDE and use the local.env file to populate environment vars (e.g. EnvFile plugin for IntelliJ)
+
+4. Run `task app:get-token` and copy the token (including "BEARER" prefix) (Mac users have the token already in their
+   clipboard :) )
 5. Open API doc on http://localhost:8000 (or what port you configured in the _env.local_ file)
 6. Click on Authorize on swagger UI and on the dialog paste the token into the "value" input
 7. Click on "Authorize" and "close"
@@ -154,13 +164,15 @@ When you just run `task` without parameters, you will see all tasks available.
 ### docker
 
 1. Run `task docker:start-app` and wait until it shows " Started ManagedIdentityWalletsApplication in ... seconds"
-2. Run `task app:get-token` and copy the token (including "BEARER" prefix) (Mac users have the token already in their clipboard :) )
+2. Run `task app:get-token` and copy the token (including "BEARER" prefix) (Mac users have the token already in their
+   clipboard :) )
 3. Open API doc on http://localhost:8000 (or what port you configured in the _env.local_ file)
 4. Click on Authorize on swagger UI and on the dialog paste the token into the "value" input
 5. Click on "Authorize" and "close"
 6. MIW is up and running
 
 # End Users
+
 See OpenAPI documentation, which is automatically created from
 the source and available on each deployment at the `/docs/api-docs/docs` endpoint
 (e.g. locally at http://localhost:8087/docs/api-docs/docs). An export of the JSON
@@ -216,34 +228,37 @@ This process ensures that any issues with the database schema are resolved by re
 
 # Environment Variables <a id= "environmentVariables"></a>
 
-| name                            | description                                                                                  | default value                                                                                                                                       |
-|---------------------------------|----------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| APPLICATION_PORT                | port number of application                                                                   | 8080                                                                                                                                                | 
-| APPLICATION_ENVIRONMENT         | Environment of the application ie. local, dev, int and prod                                  | local                                                                                                                                               |
-| DB_HOST                         | Database host                                                                                | localhost                                                                                                                                           |
-| DB_PORT                         | Port of database                                                                             | 5432                                                                                                                                                |
-| DB_NAME                         | Database name                                                                                | miw                                                                                                                                                 |
-| USE_SSL                         | Whether SSL is enabled in database server                                                    | false                                                                                                                                               |
-| DB_USER_NAME                    | Database username                                                                            |                                                                                                                                                     |
-| DB_PASSWORD                     | Database password                                                                            |                                                                                                                                                     |
-| DB_POOL_SIZE                    | Max number of database connection acquired by application                                    | 10                                                                                                                                                  |
-| KEYCLOAK_MIW_PUBLIC_CLIENT      | Only needed if we want enable login with keyalock in swagger                                 | miw_public                                                                                                                                          |
-| MANAGEMENT_PORT                 | Spring actuator port                                                                         | 8090                                                                                                                                                |
-| MIW_HOST_NAME                   | Application host name, this will be used in creation of did ie. did:web:MIW_HOST_NAME:BPN    | localhost                                                                                                                                           |
-| ENCRYPTION_KEY                  | encryption key used to encrypt and decrypt private and public key of wallet                  |                                                                                                                                                     |
-| AUTHORITY_WALLET_BPN            | base wallet BPN number                                                                       | BPNL000000000000                                                                                                                                    |
-| AUTHORITY_WALLET_NAME           | Base wallet name                                                                             | Catena-X                                                                                                                                            |
-| AUTHORITY_WALLET_DID            | Base wallet web did                                                                          | web:did:host:BPNL000000000000                                                                                                                       |
-| VC_SCHEMA_LINK                  | Comma separated list of VC schema URL                                                        | https://www.w3.org/2018/credentials/v1, https://catenax-ng.github.io/product-core-schemas/businessPartnerData.json                                  |
-| VC_EXPIRY_DATE                  | Expiry date of VC (dd-MM-yyyy ie. 01-01-2025 expiry date will be 2024-12-31T18:30:00Z in VC) | 01-01-2025                                                                                                                                          |
-| KEYCLOAK_REALM                  | Realm name of keycloak                                                                       | miw_test                                                                                                                                            |
-| KEYCLOAK_CLIENT_ID              | Keycloak private client id                                                                   |                                                                                                                                                     |
-| AUTH_SERVER_URL                 | Keycloak server url                                                                          |                                                                                                                                                     |
-| SUPPORTED_FRAMEWORK_VC_TYPES    | Supported framework VC, provide values ie type1=value1,type2=value2                          | cx-behavior-twin=Behavior Twin,cx-pcf=PCF,cx-quality=Quality,cx-resiliency=Resiliency,cx-sustainability=Sustainability,cx-traceability=ID_3.0_Trace |
-| ENFORCE_HTTPS_IN_DID_RESOLUTION | Enforce https during web did resolution                                                      | true                                                                                                                                                |
-| CONTRACT_TEMPLATES_URL          | Contract templates URL used in summary VC                                                    | https://public.catena-x.org/contracts/                                                                                                              |
-| APP_LOG_LEVEL                   | Log level of application                                                                     | INFO                                                                                                                                                |
-|                                 |                                                                                              |                                                                                                                                                     |
+| name                            | description                                                                                  | default value                                                                                                                                                    |
+|---------------------------------|----------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| APPLICATION_PORT                | port number of application                                                                   | 8080                                                                                                                                                             | 
+| APPLICATION_ENVIRONMENT         | Environment of the application ie. local, dev, int and prod                                  | local                                                                                                                                                            |
+| DB_HOST                         | Database host                                                                                | localhost                                                                                                                                                        |
+| DB_PORT                         | Port of database                                                                             | 5432                                                                                                                                                             |
+| DB_NAME                         | Database name                                                                                | miw                                                                                                                                                              |
+| USE_SSL                         | Whether SSL is enabled in database server                                                    | false                                                                                                                                                            |
+| DB_USER_NAME                    | Database username                                                                            |                                                                                                                                                                  |
+| DB_PASSWORD                     | Database password                                                                            |                                                                                                                                                                  |
+| DB_POOL_SIZE                    | Max number of database connection acquired by application                                    | 10                                                                                                                                                               |
+| KEYCLOAK_MIW_PUBLIC_CLIENT      | Only needed if we want enable login with keyalock in swagger                                 | miw_public                                                                                                                                                       |
+| MANAGEMENT_PORT                 | Spring actuator port                                                                         | 8090                                                                                                                                                             |
+| MIW_HOST_NAME                   | Application host name, this will be used in creation of did ie. did:web:MIW_HOST_NAME:BPN    | localhost                                                                                                                                                        |
+| ENCRYPTION_KEY                  | encryption key used to encrypt and decrypt private and public key of wallet                  |                                                                                                                                                                  |
+| AUTHORITY_WALLET_BPN            | base wallet BPN number                                                                       | BPNL000000000000                                                                                                                                                 |
+| AUTHORITY_WALLET_NAME           | Base wallet name                                                                             | Catena-X                                                                                                                                                         |
+| AUTHORITY_WALLET_DID            | Base wallet web did                                                                          | web:did:host:BPNL000000000000                                                                                                                                    |
+| VC_SCHEMA_LINK                  | Comma separated list of VC schema URL                                                        | https://www.w3.org/2018/credentials/v1, https://w3id.org/security/suites/jws-2020/v1, https://catenax-ng.github.io/product-core-schemas/businessPartnerData.json |
+| VC_EXPIRY_DATE                  | Expiry date of VC (dd-MM-yyyy ie. 01-01-2025 expiry date will be 2024-12-31T18:30:00Z in VC) | 01-01-2025                                                                                                                                                       |
+| KEYCLOAK_REALM                  | Realm name of keycloak                                                                       | miw_test                                                                                                                                                         |
+| KEYCLOAK_CLIENT_ID              | Keycloak private client id                                                                   |                                                                                                                                                                  |
+| AUTH_SERVER_URL                 | Keycloak server url                                                                          |                                                                                                                                                                  |
+| SUPPORTED_FRAMEWORK_VC_TYPES    | Supported framework VC, provide values ie type1=value1,type2=value2                          | cx-behavior-twin=Behavior Twin,cx-pcf=PCF,cx-quality=Quality,cx-resiliency=Resiliency,cx-sustainability=Sustainability,cx-traceability=ID_3.0_Trace              |
+| ENFORCE_HTTPS_IN_DID_RESOLUTION | Enforce https during web did resolution                                                      | true                                                                                                                                                             |
+| CONTRACT_TEMPLATES_URL          | Contract templates URL used in summary VC                                                    | https://public.catena-x.org/contracts/                                                                                                                           |
+| APP_LOG_LEVEL                   | Log level of application                                                                     | INFO                                                                                                                                                             |
+| REVOCATION_HOST                 | Host of revocation service                                                                   |                                                                                                                                                                  |
+| REVOCATION_X_API_KEY            | Ay to access revocation service                                                              |                                                                                                                                                                  |
+| REVOCATION_CONTEXT_URL          | Revocation VC context URL                                                                    | https://w3id.org/vc/status-list/2021/v1                                                                                                                          |
+|                                 |                                                                                              |                                                                                                                                                                  |
 
 # Technical Debts and Known issue
 
