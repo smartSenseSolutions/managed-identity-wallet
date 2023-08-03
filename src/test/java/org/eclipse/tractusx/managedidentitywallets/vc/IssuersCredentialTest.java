@@ -239,12 +239,7 @@ class IssuersCredentialTest {
 
         Map<String, Objects> map = objectMapper.readValue(credentialWithoutProof.toJson(), Map.class);
 
-        Map<String, Object> statusMap = new HashMap<>();
-        statusMap.put(VerifiableCredentialStatusList2021Entry.TYPE, "StatusList2021Entry");
-        statusMap.put(VerifiableCredentialStatusList2021Entry.ID, "http://localhost:8085/api/v1/revocations/credentials/did-revocation#0");
-        statusMap.put(VerifiableCredentialStatusList2021Entry.STATUS_PURPOSE, "revocation");
-        statusMap.put(VerifiableCredentialStatusList2021Entry.STATUS_LIST_INDEX, "1");
-        statusMap.put(VerifiableCredentialStatusList2021Entry.STATUS_LIST_CREDENTIAL, "http://localhost:8085/api/v1/revocations/credentials/did-revocation");
+        Map<String, Object> statusMap = TestUtils.getStatusListentry();
 
         //mock revocation service
         Mockito.when(revocationClient.statusEntry(Mockito.anyString(), Mockito.any(StatusEntryRequest.class))).thenReturn(statusMap);

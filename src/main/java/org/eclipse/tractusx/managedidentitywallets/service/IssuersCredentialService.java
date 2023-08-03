@@ -476,7 +476,7 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * @param withCredentialExpiryDate the with credential expiry date
      * @return the map
      */
-    public Map<String, Object> credentialsValidation(Map<String, Object> data, boolean withCredentialExpiryDate) {
+    public Map<String, Object> credentialsValidation(Map<String, Object> data, boolean withCredentialExpiryDate, boolean withRevocation) {
         VerifiableCredential verifiableCredential = new VerifiableCredential(data);
         // DID Resolver Constracture params
         DidDocumentResolverRegistry didDocumentResolverRegistry = new DidDocumentResolverRegistryImpl();
@@ -504,7 +504,10 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
         //check expiry
         boolean dateValidation = CommonService.validateExpiry(withCredentialExpiryDate, verifiableCredential, response);
 
-        response.put(StringPool.VALID, valid && dateValidation);
+        //check revocation
+        boolean isRevoked = commonService.validateRevocation(withRevocation, verifiableCredential, response);
+
+        response.put(StringPool.VALID, valid && dateValidation && !isRevoked);
         response.put("vc", verifiableCredential);
 
         return response;

@@ -24,6 +24,7 @@ package org.eclipse.tractusx.managedidentitywallets.utils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.eclipse.tractusx.managedidentitywallets.config.MIWSettings;
+import org.eclipse.tractusx.managedidentitywallets.config.RevocationSettings;
 import org.eclipse.tractusx.managedidentitywallets.constant.MIWVerifiableCredentialType;
 import org.eclipse.tractusx.managedidentitywallets.constant.RestURI;
 import org.eclipse.tractusx.managedidentitywallets.constant.StringPool;
@@ -38,6 +39,7 @@ import org.eclipse.tractusx.managedidentitywallets.dto.IssueFrameworkCredentialR
 import org.eclipse.tractusx.managedidentitywallets.dto.IssueMembershipCredentialRequest;
 import org.eclipse.tractusx.ssi.lib.model.did.DidDocument;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialStatusList2021Entry;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialSubject;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
@@ -50,12 +52,21 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
 
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
+/**
+ * The type Test utils.
+ */
 public class TestUtils {
 
+    /**
+     * Create wallet response entity.
+     *
+     * @param bpn          the bpn
+     * @param name         the name
+     * @param testTemplate the test template
+     * @return the response entity
+     */
     public static ResponseEntity<String> createWallet(String bpn, String name, TestRestTemplate testTemplate) {
         HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(bpn);
 
@@ -68,6 +79,14 @@ public class TestUtils {
 
     }
 
+    /**
+     * Create wallet wallet.
+     *
+     * @param bpn              the bpn
+     * @param did              the did
+     * @param walletRepository the wallet repository
+     * @return the wallet
+     */
     public static Wallet createWallet(String bpn, String did, WalletRepository walletRepository) {
         String didDocument = """
                 {
@@ -95,16 +114,46 @@ public class TestUtils {
     }
 
     public static void checkVC(VerifiableCredential verifiableCredential, MIWSettings miwSettings) {
-        //text context URL
+        List<URI> links = new ArrayList<>(miwSettings.vcContexts());
+
         Assertions.assertEquals(verifiableCredential.getContext().size(), miwSettings.vcContexts().size());
         for (URI link : verifiableCredential.getContext()) {
-            Assertions.assertTrue(miwSettings.vcContexts().contains(link));
+            Assertions.assertTrue(links.contains(link));
         }
-
         //check expiry date
         Assertions.assertEquals(0, verifiableCredential.getExpirationDate().compareTo(miwSettings.vcExpiryDate().toInstant()));
     }
 
+    /**
+     * Check vc.
+     *
+     * @param verifiableCredential the verifiable credential
+     * @param miwSettings          the miw settings
+     */
+    public static void checkVC(VerifiableCredential verifiableCredential, MIWSettings miwSettings, RevocationSettings revocationSettings) {
+        List<URI> links = new ArrayList<>(miwSettings.vcContexts());
+        if (!Objects.isNull(verifiableCredential.getVerifiableCredentialStatus())) {
+            //in case of revocation, there will be revocation context url
+            Assertions.assertEquals(verifiableCredential.getContext().size(), miwSettings.vcContexts().size() + 1);
+            links.add(revocationSettings.contextUrl());
+        } else {
+            Assertions.assertEquals(verifiableCredential.getContext().size(), miwSettings.vcContexts().size());
+        }
+        for (URI link : verifiableCredential.getContext()) {
+            Assertions.assertTrue(links.contains(link));
+        }
+        //check expiry date
+        Assertions.assertEquals(0, verifiableCredential.getExpirationDate().compareTo(miwSettings.vcExpiryDate().toInstant()));
+    }
+
+    /**
+     * Issue membership vc response entity.
+     *
+     * @param restTemplate  the rest template
+     * @param bpn           the bpn
+     * @param baseWalletBpn the base wallet bpn
+     * @return the response entity
+     */
     public static ResponseEntity<String> issueMembershipVC(TestRestTemplate restTemplate, String bpn, String baseWalletBpn) {
         HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(baseWalletBpn);
         IssueMembershipCredentialRequest request = IssueMembershipCredentialRequest.builder().bpn(bpn).build();
@@ -113,6 +162,13 @@ public class TestUtils {
         return restTemplate.exchange(RestURI.CREDENTIALS_ISSUER_MEMBERSHIP, HttpMethod.POST, entity, String.class);
     }
 
+    /**
+     * Gets issue framework credential request.
+     *
+     * @param bpn  the bpn
+     * @param type the type
+     * @return the issue framework credential request
+     */
     public static IssueFrameworkCredentialRequest getIssueFrameworkCredentialRequest(String bpn, String type) {
         IssueFrameworkCredentialRequest twinRequest = IssueFrameworkCredentialRequest.builder()
                 .contractTemplate("http://localhost")
@@ -124,6 +180,13 @@ public class TestUtils {
     }
 
 
+    /**
+     * Gets wallet from string.
+     *
+     * @param body the body
+     * @return the wallet from string
+     * @throws JsonProcessingException the json processing exception
+     */
     public static Wallet getWalletFromString(String body) throws JsonProcessingException {
         JSONObject jsonObject = new JSONObject(body);
         //convert DidDocument
@@ -154,12 +217,29 @@ public class TestUtils {
     }
 
 
+    /**
+     * Gets summary credential id.
+     *
+     * @param holderDID                   the holder did
+     * @param holdersCredentialRepository the holders credential repository
+     * @return the summary credential id
+     */
     public static String getSummaryCredentialId(String holderDID, HoldersCredentialRepository holdersCredentialRepository) {
         List<HoldersCredential> holderVCs = holdersCredentialRepository.getByHolderDidAndType(holderDID, MIWVerifiableCredentialType.SUMMARY_CREDENTIAL);
         Assertions.assertEquals(1, holderVCs.size());
         return holderVCs.get(0).getData().getId().toString();
     }
 
+    /**
+     * Check summary credential.
+     *
+     * @param issuerDID                   the issuer did
+     * @param holderDID                   the holder did
+     * @param holdersCredentialRepository the holders credential repository
+     * @param issuersCredentialRepository the issuers credential repository
+     * @param type                        the type
+     * @param previousSummaryCredentialId the previous summary credential id
+     */
     public static void checkSummaryCredential(String issuerDID, String holderDID, HoldersCredentialRepository holdersCredentialRepository,
                                               IssuersCredentialRepository issuersCredentialRepository, String type, String previousSummaryCredentialId) {
 
@@ -187,6 +267,14 @@ public class TestUtils {
     }
 
 
+    /**
+     * Gets verifiable credentials.
+     *
+     * @param response     the response
+     * @param objectMapper the object mapper
+     * @return the verifiable credentials
+     * @throws JsonProcessingException the json processing exception
+     */
     @NotNull
     public static List<VerifiableCredential> getVerifiableCredentials(ResponseEntity<String> response, ObjectMapper objectMapper) throws JsonProcessingException {
         Map<String, Object> map = objectMapper.readValue(response.getBody(), Map.class);
@@ -199,4 +287,22 @@ public class TestUtils {
         }
         return credentialList;
     }
+
+
+    /**
+     * Gets status listentry.
+     *
+     * @return the status listentry
+     */
+    @NotNull
+    public static Map<String, Object> getStatusListentry() {
+        Map<String, Object> statusMap = new HashMap<>();
+        statusMap.put(VerifiableCredentialStatusList2021Entry.TYPE, "StatusList2021Entry");
+        statusMap.put(VerifiableCredentialStatusList2021Entry.ID, "http://localhost:8085/api/v1/revocations/credentials/did-revocation#0");
+        statusMap.put(VerifiableCredentialStatusList2021Entry.STATUS_PURPOSE, "revocation");
+        statusMap.put(VerifiableCredentialStatusList2021Entry.STATUS_LIST_INDEX, "1");
+        statusMap.put(VerifiableCredentialStatusList2021Entry.STATUS_LIST_CREDENTIAL, "http://localhost:8085/api/v1/revocations/credentials/did-revocation");
+        return statusMap;
+    }
+
 }

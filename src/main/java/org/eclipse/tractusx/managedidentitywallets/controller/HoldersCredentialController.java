@@ -342,8 +342,8 @@ public class HoldersCredentialController extends BaseController {
                                 }
                     """))
     })
-    public ResponseEntity<VerifiableCredential> issueCredential(@RequestBody Map<String, Object> data, Principal principal) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(holdersCredentialService.issueCredential(data, getBPNFromToken(principal)));
+    public ResponseEntity<VerifiableCredential> issueCredential(@Parameter(description = "true if you want issue revocable credentials. Default will be false") @RequestParam(name = "revocable", required = false, defaultValue = "false") boolean revocable, @RequestBody Map<String, Object> data, Principal principal) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(holdersCredentialService.issueCredential(data, getBPNFromToken(principal), revocable));
     }
 
     /**
