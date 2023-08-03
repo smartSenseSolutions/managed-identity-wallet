@@ -647,11 +647,7 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
         Validate.isNull(verifiableCredential.getVerifiableCredentialStatus())
                 .launch(new CredentialNotFoundProblem("Credential Status is not exists"));
 
-        revocationService.revokeCredential(
-                (VerifiableCredentialStatusList2021Entry)
-                        verifiableCredential.getVerifiableCredentialStatus());
-        log.debug(
-                "VC revoked with id ->{}",
-                StringEscapeUtils.escapeJava(String.valueOf(verifiableCredential.getId())));
+        revocationService.revokeCredential((VerifiableCredentialStatusList2021Entry) verifiableCredential.getVerifiableCredentialStatus());
+        log.debug("VC revoked with id ->{}", StringEscapeUtils.escapeJava(String.valueOf(verifiableCredential.getId())));
     }
 }
