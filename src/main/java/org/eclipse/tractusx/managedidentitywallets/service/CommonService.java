@@ -30,7 +30,9 @@ import org.eclipse.tractusx.managedidentitywallets.constant.StringPool;
 import org.eclipse.tractusx.managedidentitywallets.dao.entity.HoldersCredential;
 import org.eclipse.tractusx.managedidentitywallets.dao.entity.Wallet;
 import org.eclipse.tractusx.managedidentitywallets.dao.repository.WalletRepository;
+import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
 import org.eclipse.tractusx.managedidentitywallets.exception.WalletNotFoundProblem;
+import org.eclipse.tractusx.managedidentitywallets.revocation.model.StatusVerificationResponse;
 import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.CommonUtils;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
@@ -40,10 +42,7 @@ import org.eclipse.tractusx.ssi.lib.exception.InvalidePrivateKeyFormat;
 import org.eclipse.tractusx.ssi.lib.exception.UnsupportedSignatureTypeException;
 import org.eclipse.tractusx.ssi.lib.model.did.DidDocument;
 import org.eclipse.tractusx.ssi.lib.model.proof.jws.JWSSignature2020;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialBuilder;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialSubject;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialType;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.*;
 import org.eclipse.tractusx.ssi.lib.proof.LinkedDataProofGenerator;
 import org.eclipse.tractusx.ssi.lib.proof.SignatureType;
 import org.springframework.stereotype.Service;
@@ -109,6 +108,34 @@ public class CommonService {
             }
         }
         return dateValidation;
+    }
+
+    /**
+     * Validate revocation boolean.
+     *
+     * @param withRevocation       the with revocation
+     * @param verifiableCredential the verifiable credential
+     * @param response             the response
+     * @return the boolean
+     */
+    public boolean validateRevocation(boolean withRevocation, VerifiableCredential verifiableCredential, Map<String, Object> response) {
+        //validate revocation
+        boolean revoked = false;
+        if (withRevocation) {
+            if (Objects.nonNull(verifiableCredential.getVerifiableCredentialStatus())) {
+                VerifiableCredentialStatusList2021Entry verifiableCredentialStatus = (VerifiableCredentialStatusList2021Entry) verifiableCredential.getVerifiableCredentialStatus();
+                StatusVerificationResponse status = revocationService.verifyStatus(verifiableCredentialStatus);
+                if (status.isRevoked()) {
+                    revoked = true;
+                    response.put(StringPool.REVOKED, true);
+                } else {
+                    response.put(StringPool.REVOKED, false);
+                }
+            } else {
+                throw new BadDataException("Credential status not found in VC");
+            }
+        }
+        return revoked;
     }
 
     /**
@@ -183,7 +210,7 @@ public class CommonService {
 
         //if VC is revocable
         if (revocable) {
-            builder.verifiableCredentialStatus(revocationService.statusEntryForSuspension(issuerDidDocument.getId().toString()));
+            builder.verifiableCredentialStatus(revocationService.statusEntryForRevocation(issuerDidDocument.getId().toString()));
             //add revocation context
             contexts.add(revocationSettings.contextUrl());
         }

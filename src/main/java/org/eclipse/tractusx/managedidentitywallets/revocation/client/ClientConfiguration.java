@@ -23,7 +23,6 @@
 package org.eclipse.tractusx.managedidentitywallets.revocation.client;
 
 import feign.RequestInterceptor;
-import feign.RequestTemplate;
 import org.eclipse.tractusx.managedidentitywallets.config.RevocationSettings;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,12 +39,7 @@ public class ClientConfiguration {
 
     @Bean
     public RequestInterceptor apiKeyRequestInterceptor() {
-        return new RequestInterceptor() {
-            @Override
-            public void apply(RequestTemplate template) {
-                template.header("X-API-KEY",
-                        String.format(apiKey));
-            }
-        };
+        return template -> template.header("X-API-KEY",
+                String.format(apiKey));
     }
 }

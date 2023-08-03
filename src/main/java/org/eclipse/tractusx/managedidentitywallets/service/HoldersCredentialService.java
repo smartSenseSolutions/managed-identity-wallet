@@ -105,11 +105,11 @@ public class HoldersCredentialService extends BaseService<HoldersCredential, Lon
 
         //Holder must be caller of API
         Wallet holderWallet = commonService.getWalletByIdentifier(callerBPN);
-        filterRequest.appendCriteria(StringPool.HOLDER_DID, Operator.EQUALS, holderWallet.getDid().toString());
+        filterRequest.appendCriteria(StringPool.HOLDER_DID, Operator.EQUALS, holderWallet.getDid());
 
         if (StringUtils.hasText(issuerIdentifier)) {
             Wallet issuerWallet = commonService.getWalletByIdentifier(issuerIdentifier);
-            filterRequest.appendCriteria(StringPool.ISSUER_DID, Operator.EQUALS, issuerWallet.getDid().toString());
+            filterRequest.appendCriteria(StringPool.ISSUER_DID, Operator.EQUALS, issuerWallet.getDid());
         }
 
         if (StringUtils.hasText(credentialId)) {
@@ -146,7 +146,7 @@ public class HoldersCredentialService extends BaseService<HoldersCredential, Lon
      * @param callerBpn the caller bpn
      * @return the verifiable credential
      */
-    public VerifiableCredential issueCredential(Map<String, Object> data, String callerBpn) {
+    public VerifiableCredential issueCredential(Map<String, Object> data, String callerBpn, boolean revocable) {
         VerifiableCredential verifiableCredential = new VerifiableCredential(data);
         Wallet issuerWallet = commonService.getWalletByIdentifier(verifiableCredential.getIssuer().toString());
 
@@ -158,9 +158,9 @@ public class HoldersCredentialService extends BaseService<HoldersCredential, Lon
 
         //set random id
         verifiableCredential.put(VerifiableCredential.ID, URI.create(issuerWallet.getDidDocument().getId() + "#" + URI.create(UUID.randomUUID().toString())));
-        
+
         // Create Credential
-        HoldersCredential credential = commonService.getHoldersCredential(verifiableCredential, issuerWallet.getDidDocument(), privateKeyBytes, issuerWallet.getDid(), true);
+        HoldersCredential credential = commonService.getHoldersCredential(verifiableCredential, issuerWallet.getDidDocument(), privateKeyBytes, issuerWallet.getDid(), true, revocable);
 
         //Store Credential in holder table
         credential = create(credential);

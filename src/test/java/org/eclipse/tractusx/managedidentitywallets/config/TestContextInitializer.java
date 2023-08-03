@@ -31,7 +31,8 @@ import java.net.ServerSocket;
 
 public class TestContextInitializer implements ApplicationContextInitializer<ConfigurableApplicationContext> {
 
-    private static final int port = findFreePort();
+    private static final int PORT = findFreePort();
+    private static final int MANAGEMENT_PORT = findFreePort();
     private static final KeycloakContainer KEYCLOAK_CONTAINER = new KeycloakContainer().withRealmImportFile("miw-test-realm.json");
 
     @Override
@@ -40,7 +41,8 @@ public class TestContextInitializer implements ApplicationContextInitializer<Con
         String authServerUrl = KEYCLOAK_CONTAINER.getAuthServerUrl();
 
         TestPropertyValues.of(
-                "server.port=" + port,
+                "server.port=" + PORT,
+                "management.server.port=" + MANAGEMENT_PORT,
                 "miw.host: localhost:${server.port}",
                 "miw.enforceHttps=false",
                 "miw.authorityWalletBpn: BPNL000000000000",

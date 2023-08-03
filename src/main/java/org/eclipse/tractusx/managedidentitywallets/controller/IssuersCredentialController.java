@@ -210,8 +210,9 @@ public class IssuersCredentialController extends BaseController {
                     """))
     })
     public ResponseEntity<Map<String, Object>> credentialsValidation(@RequestBody Map<String, Object> data,
-                                                                     @Parameter(description = "Check expiry of VC") @RequestParam(name = "withCredentialExpiryDate", defaultValue = "false", required = false) boolean withCredentialExpiryDate) {
-        return ResponseEntity.status(HttpStatus.OK).body(issuersCredentialService.credentialsValidation(data, withCredentialExpiryDate));
+                                                                     @Parameter(description = "Check expiry of VC") @RequestParam(name = "withCredentialExpiryDate", defaultValue = "false", required = false) boolean withCredentialExpiryDate,
+                                                                     @Parameter(description = "Check revocation status of VC") @RequestParam(name = "withRevocation", defaultValue = "false", required = false) boolean withRevocation) {
+        return ResponseEntity.status(HttpStatus.OK).body(issuersCredentialService.credentialsValidation(data, withCredentialExpiryDate, withRevocation));
     }
 
     /**
@@ -231,8 +232,7 @@ public class IssuersCredentialController extends BaseController {
                                 {
                                       "id": "http://example.edu/credentials/333",
                                       "@context": [
-                                        "https://www.w3.org/2018/credentials/v1",
-                                        "https://www.w3.org/2018/credentials/examples/v1"
+                                        "https://www.w3.org/2018/credentials/v1"
                                       ],
                                       "type": [
                                         "VerifiableCredential", "BankAccountCredential"

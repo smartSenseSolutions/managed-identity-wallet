@@ -45,7 +45,6 @@ import org.eclipse.tractusx.managedidentitywallets.dto.IssueMembershipCredential
 import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
 import org.eclipse.tractusx.managedidentitywallets.exception.DuplicateCredentialProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.ForbiddenException;
-import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
 import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistry;
 import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
@@ -95,7 +94,6 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
 
     private final CommonService commonService;
 
-    private final RevocationService revocationService;
 
     /**
      * Instantiates a new Issuers credential service.
@@ -106,18 +104,16 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * @param walletKeyService            the wallet key service
      * @param holdersCredentialRepository the holders credential repository
      * @param commonService               the common service
-     * @param revocationService
      */
     public IssuersCredentialService(IssuersCredentialRepository issuersCredentialRepository, MIWSettings miwSettings,
                                     SpecificationUtil<IssuersCredential> credentialSpecificationUtil,
-                                    WalletKeyService walletKeyService, HoldersCredentialRepository holdersCredentialRepository, CommonService commonService, RevocationService revocationService) {
+                                    WalletKeyService walletKeyService, HoldersCredentialRepository holdersCredentialRepository, CommonService commonService) {
         this.issuersCredentialRepository = issuersCredentialRepository;
         this.miwSettings = miwSettings;
         this.credentialSpecificationUtil = credentialSpecificationUtil;
         this.walletKeyService = walletKeyService;
         this.holdersCredentialRepository = holdersCredentialRepository;
         this.commonService = commonService;
-        this.revocationService = revocationService;
     }
 
 
@@ -480,7 +476,7 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * @param withCredentialExpiryDate the with credential expiry date
      * @return the map
      */
-    public Map<String, Object> credentialsValidation(Map<String, Object> data, boolean withCredentialExpiryDate) {
+    public Map<String, Object> credentialsValidation(Map<String, Object> data, boolean withCredentialExpiryDate, boolean withRevocation) {
         VerifiableCredential verifiableCredential = new VerifiableCredential(data);
         // DID Resolver Constracture params
         DidDocumentResolverRegistry didDocumentResolverRegistry = new DidDocumentResolverRegistryImpl();
@@ -506,9 +502,12 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
         Map<String, Object> response = new HashMap<>();
 
         //check expiry
-        boolean dateValidation = commonService.validateExpiry(withCredentialExpiryDate, verifiableCredential, response);
+        boolean dateValidation = CommonService.validateExpiry(withCredentialExpiryDate, verifiableCredential, response);
 
-        response.put(StringPool.VALID, valid && dateValidation);
+        //check revocation
+        boolean isRevoked = commonService.validateRevocation(withRevocation, verifiableCredential, response);
+
+        response.put(StringPool.VALID, valid && dateValidation && !isRevoked);
         response.put("vc", verifiableCredential);
 
         return response;
@@ -590,7 +589,7 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
                 StringPool.CONTRACT_TEMPLATE, miwSettings.contractTemplatesUrl()));
 
         List<String> types = List.of(VerifiableCredentialType.VERIFIABLE_CREDENTIAL, MIWVerifiableCredentialType.SUMMARY_CREDENTIAL);
-        
+
         VerifiableCredential vc =
                 new VerifiableCredentialBuilder()
                         .id(URI.create(issuerDidDocument.getId() + "#" + URI.create(UUID.randomUUID().toString())))
