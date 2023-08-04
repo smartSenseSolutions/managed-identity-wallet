@@ -1158,7 +1158,6 @@ public class IssuersCredentialController extends BaseController {
     @io.swagger.v3.oas.annotations.parameters.RequestBody(content = {
             @Content(examples = @ExampleObject("""
                                 {
-<<<<<<< HEAD
                                   "@context": [
                                     "https://www.w3.org/2018/credentials/v1",
                                     "https://catenax-ng.github.io/product-core-schemas/businessPartnerData.json",
@@ -1179,29 +1178,12 @@ public class IssuersCredentialController extends BaseController {
                                       "type": "BpnCredential"
                                     }
                                   ]
-=======
-                                      "id": "http://example.edu/credentials/333",
-                                      "@context": [
-                                        "https://www.w3.org/2018/credentials/v1"
-                                      ],
-                                      "type": [
-                                        "VerifiableCredential", "BankAccountCredential"
-                                      ],
-                                      "issuer": "did:example:76e12ec712ebc6f1c221ebfeb1f",
-                                      "issuanceDate": "2019-06-16T18:56:59Z",
-                                      "expirationDate": "2019-06-17T18:56:59Z",
-                                      "credentialSubject": [{
-                                        "name": "Sample Bank",
-                                        "accountNumber":"4567231458"
-                                      }]
->>>>>>> 6017c58 (feat: CGD-310: validate VC with revocation and test case)
                                 }
                     """))
     })
     public ResponseEntity<VerifiableCredential> issueCredentialUsingBaseWallet(@Parameter(description = "Holder DID", examples = {@ExampleObject(description = "did", name = "did", value = "did:web:localhost:BPNL000000000000")}) @RequestParam(name = "holderDid") String holderDid,
                                                                                @Parameter(description = "true if you want issue revocable credentials. Default will be false") @RequestParam(name = "revocable", required = false, defaultValue = "false") boolean revocable, @RequestBody Map<String, Object> data, Principal principal) {
         return ResponseEntity.status(HttpStatus.CREATED).body(issuersCredentialService.issueCredentialUsingBaseWallet(holderDid, revocable, data, getBPNFromToken(principal)));
-
     }
 
     @Tag(name = API_TAG_VERIFIABLE_CREDENTIAL_REVOKE)
@@ -1211,31 +1193,24 @@ public class IssuersCredentialController extends BaseController {
     @io.swagger.v3.oas.annotations.parameters.RequestBody(content = {
             @Content(examples = @ExampleObject("""
                                 {
-                                    "issuanceDate": "2023-08-03T06:25:08Z",
+                                    "@context": [
+                                      "https://www.w3.org/2018/credentials/v1",
+                                      "https://w3id.org/security/suites/jws-2020/v1",
+                                      "https://w3id.org/vc/status-list/2021/v1"
+                                    ],
+                                    "id": "did:web:localhost:BPNL000000000000#983376f8-15bf-47f6-8b43-26e8f63a97f2",
+                                    "type": [
+                                      "VerifiableCredential",
+                                      "BankAccountCredential"
+                                    ],
                                     "credentialSubject": [
                                       {
                                         "name": "Sample Bank",
                                         "accountNumber": "4567231458"
                                       }
                                     ],
-                                    "id": "did:web:localhost:BPNL000000000000#983376f8-15bf-47f6-8b43-26e8f63a97f2",
-                                    "proof": {
-                                      "proofPurpose": "proofPurpose",
-                                      "verificationMethod": "did:web:localhost:BPNL000000000000#",
-                                      "type": "JsonWebSignature2020",
-                                      "created": "2023-08-03T06:25:11Z",
-                                      "jws": "eyJhbGciOiJFZERTQSJ9..Zbrle0VMVc2u0BZiI5C5lPo2yIIm4BrhgwzZwS2DFGaCG7rIm1R4LBHSg6kRdp_1x23uVajUv-j5a-PSLoSQCA"
-                                    },
-                                    "type": [
-                                      "VerifiableCredential",
-                                      "BankAccountCredential"
-                                    ],
-                                    "@context": [
-                                      "https://www.w3.org/2018/credentials/v1",
-                                      "https://w3id.org/security/suites/jws-2020/v1",
-                                      "https://w3id.org/vc/status-list/2021/v1"
-                                    ],
                                     "issuer": "did:web:localhost:BPNL000000000000",
+                                    "issuanceDate": "2023-08-03T06:25:08Z",
                                     "expirationDate": "2019-06-17T18:56:59Z",
                                     "credentialStatus": {
                                       "type": "StatusList2021Entry",
@@ -1243,7 +1218,14 @@ public class IssuersCredentialController extends BaseController {
                                       "statusPurpose": "revocation",
                                       "statusListIndex": "1",
                                       "statusListCredential": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation"
-                                    }
+                                    },
+                                    "proof": {
+                                      "proofPurpose": "proofPurpose",
+                                      "verificationMethod": "did:web:localhost:BPNL000000000000#",
+                                      "type": "JsonWebSignature2020",
+                                      "created": "2023-08-03T06:25:11Z",
+                                      "jws": "eyJhbGciOiJFZERTQSJ9..Zbrle0VMVc2u0BZiI5C5lPo2yIIm4BrhgwzZwS2DFGaCG7rIm1R4LBHSg6kRdp_1x23uVajUv-j5a-PSLoSQCA"
+                                    },
                                   }
                     """))
     })
