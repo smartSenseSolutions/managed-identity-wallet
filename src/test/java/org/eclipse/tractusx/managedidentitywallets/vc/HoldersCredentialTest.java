@@ -39,6 +39,7 @@ import org.eclipse.tractusx.managedidentitywallets.dto.CreateWalletRequest;
 import org.eclipse.tractusx.managedidentitywallets.dto.IssueFrameworkCredentialRequest;
 import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
 import org.eclipse.tractusx.managedidentitywallets.revocation.client.RevocationClient;
+import org.eclipse.tractusx.managedidentitywallets.revocation.model.RevocationRequest;
 import org.eclipse.tractusx.managedidentitywallets.revocation.model.StatusEntryRequest;
 import org.eclipse.tractusx.managedidentitywallets.revocation.model.StatusVerificationRequest;
 import org.eclipse.tractusx.managedidentitywallets.revocation.model.StatusVerificationResponse;
@@ -397,6 +398,54 @@ class HoldersCredentialTest {
             Assertions.assertFalse(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
             Assertions.assertFalse(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALIDATE_EXPIRY_DATE).toString()));
 
+        }
+    }
+
+    @Test
+    void revokeVC() throws JsonProcessingException {
+
+        //issue revocable VC
+        String bpn = UUID.randomUUID().toString();
+        String did = DidWebFactory.fromHostnameAndPath(miwSettings.host(), bpn).toString();
+        String type = "TestCredential";
+        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(bpn);
+
+        Map<String, Object> statusMap = TestUtils.getStatusListentry();
+        ResponseEntity<String> response = issueVC(bpn, did, type, headers, true, statusMap);
+
+        Assertions.assertEquals(HttpStatus.CREATED.value(), response.getStatusCode().value());
+
+        VerifiableCredential verifiableCredential = new VerifiableCredential(new ObjectMapper().readValue(response.getBody(), Map.class));
+        Map<String, Object> map = objectMapper.readValue(verifiableCredential.toJson(), Map.class);
+
+        //service call
+        try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
+
+            //mock setup
+            LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
+            utils.when(() -> {
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+            }).thenReturn(mock);
+
+            //mock signature check
+            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+
+            //mock evocation client, return revoked = true
+            Mockito.reset(revocationClient);
+
+            Mockito.doNothing().when(revocationClient).revoke(Mockito.any(RevocationRequest.class));
+            credentialController.credentialsRevoke(map).getBody();
+            Mockito.reset(revocationClient);
+
+            //mock revocation to return revoked=ture
+            StatusVerificationResponse statusVerificationResponse = new StatusVerificationResponse();
+            statusVerificationResponse.setSuspended(false);
+            statusVerificationResponse.setRevoked(true);
+            Mockito.when(revocationClient.verify(Mockito.any(StatusVerificationRequest.class))).thenReturn(statusVerificationResponse);
+            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(map, false, true).getBody();
+            Assertions.assertFalse(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
+            Assertions.assertTrue(Boolean.parseBoolean(stringObjectMap.get(StringPool.REVOKED).toString()));
+            Mockito.reset(revocationClient);
         }
     }
 
