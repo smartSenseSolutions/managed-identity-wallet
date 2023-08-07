@@ -43,7 +43,6 @@ import org.eclipse.tractusx.managedidentitywallets.dto.IssueDismantlerCredential
 import org.eclipse.tractusx.managedidentitywallets.dto.IssueFrameworkCredentialRequest;
 import org.eclipse.tractusx.managedidentitywallets.dto.IssueMembershipCredentialRequest;
 import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
-import org.eclipse.tractusx.managedidentitywallets.exception.CredentialNotFoundProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.DuplicateCredentialProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.ForbiddenException;
 import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
@@ -81,6 +80,9 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * The constant BASE_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN.
      */
     public static final String BASE_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN = "Base wallet BPN is not matching with request BPN(from token)";
+    /**
+     * The constant ISSUER_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN.
+     */
     public static final String ISSUER_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN = "Issuer wallet BPN is not matching with request BPN(from token)";
 
     private final IssuersCredentialRepository issuersCredentialRepository;
@@ -641,22 +643,17 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
     /**
      * Credentials revoke.
      *
-     * @param data the data
+     * @param data      the data
+     * @param callerBPN the caller bpn
      */
     public void credentialsRevoke(Map<String, Object> data, String callerBPN) {
         VerifiableCredential verifiableCredential = new VerifiableCredential(data);
+        Validate.isNull(verifiableCredential.getVerifiableCredentialStatus()).launch(new BadDataException("Credential Status is not exists"));
         Wallet issuerWallet = commonService.getWalletByIdentifier(verifiableCredential.getIssuer().toString());
 
         //validate BPN access, Issuer must be caller of API
         Validate.isFalse(callerBPN.equals(issuerWallet.getBpn())).launch(new ForbiddenException(ISSUER_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN));
-        Validate.isNull(verifiableCredential.getVerifiableCredentialStatus())
-                .launch(new CredentialNotFoundProblem("Credential Status is not exists"));
-
-        revocationService.revokeCredential(
-                (VerifiableCredentialStatusList2021Entry)
-                        verifiableCredential.getVerifiableCredentialStatus());
-        log.debug(
-                "VC revoked with id ->{}",
-                StringEscapeUtils.escapeJava(String.valueOf(verifiableCredential.getId())));
+        revocationService.revokeCredential((VerifiableCredentialStatusList2021Entry) verifiableCredential.getVerifiableCredentialStatus());
+        log.debug("VC revoked with id ->{}", StringEscapeUtils.escapeJava(String.valueOf(verifiableCredential.getId())));
     }
 }
