@@ -81,6 +81,7 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * The constant BASE_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN.
      */
     public static final String BASE_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN = "Base wallet BPN is not matching with request BPN(from token)";
+    public static final String ISSUER_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN = "Issuer wallet BPN is not matching with request BPN(from token)";
 
     private final IssuersCredentialRepository issuersCredentialRepository;
     private final MIWSettings miwSettings;
@@ -642,9 +643,12 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      *
      * @param data the data
      */
-    public void credentialsRevoke(Map<String, Object> data) {
+    public void credentialsRevoke(Map<String, Object> data, String callerBPN) {
         VerifiableCredential verifiableCredential = new VerifiableCredential(data);
+        Wallet issuerWallet = commonService.getWalletByIdentifier(verifiableCredential.getIssuer().toString());
 
+        //validate BPN access, Issuer must be caller of API
+        Validate.isFalse(callerBPN.equals(issuerWallet.getBpn())).launch(new ForbiddenException(ISSUER_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN));
         Validate.isNull(verifiableCredential.getVerifiableCredentialStatus())
                 .launch(new CredentialNotFoundProblem("Credential Status is not exists"));
 

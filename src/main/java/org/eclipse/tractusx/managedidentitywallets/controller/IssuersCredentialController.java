@@ -1229,8 +1229,8 @@ public class IssuersCredentialController extends BaseController {
                                   }
                     """))
     })
-    public ResponseEntity<Object> credentialsRevoke(@RequestBody Map<String, Object> data) {
-        issuersCredentialService.credentialsRevoke(data);
+    public ResponseEntity<Object> credentialsRevoke(@RequestBody Map<String, Object> data, Principal principal) {
+        issuersCredentialService.credentialsRevoke(data, getBPNFromToken(principal));
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 }
