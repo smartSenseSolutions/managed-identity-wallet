@@ -122,124 +122,175 @@ public class IssuersCredentialController extends BaseController {
             @Content(examples = {
                     @ExampleObject(name = "Issuer credential list", value = """
                              {
-                                "content": [
-                                  {
-                                    "@context": [
-                                      "https://www.w3.org/2018/credentials/v1",
-                                      "https://catenax-ng.github.io/product-core-schemas/businessPartnerData.json",
-                                      "https://w3id.org/security/suites/jws-2020/v1"
-                                    ],
-                                    "id": "did:web:localhost:BPNL000000000000#ae364f71-f054-4d91-b579-f001bcb3e59e",
-                                    "type": [
-                                      "VerifiableCredential",
-                                      "BpnCredential"
-                                    ],
-                                    "issuer": "did:web:localhost:BPNL000000000000",
-                                    "issuanceDate": "2023-07-19T09:27:42Z",
-                                    "expirationDate": "2024-12-31T18:30:00Z",
-                                    "credentialSubject": [
-                                      {
-                                        "bpn": "BPNL000000000000",
-                                        "id": "did:web:localhost:BPNL000000000000",
-                                        "type": "BpnCredential"
-                                      }
-                                    ],
-                                    "proof": {
-                                      "created": "2023-07-19T09:27:44Z",
-                                      "jws": "eyJhbGciOiJFZERTQSJ9..evDHQfW4EzJUt2HnS_WlmO8FFtywTGnwyywtCE7WP41my4Iscpqr4tbuVOqnZg85b4U8L3_ut8_pEONIhbExCQ",
-                                      "proofPurpose": "proofPurpose",
-                                      "type": "JsonWebSignature2020",
-                                      "verificationMethod": "did:web:localhost:BPNL000000000000#"
-                                    }
-                                  },
-                                  {
-                                    "type": [
-                                      "VerifiableCredential",
-                                      "SummaryCredential"
-                                    ],
-                                    "@context": [
-                                      "https://www.w3.org/2018/credentials/v1",
-                                      "https://catenax-ng.github.io/product-core-schemas/SummaryVC.json",
-                                      "https://w3id.org/security/suites/jws-2020/v1"
-                                    ],
-                                    "issuer": "did:web:localhost:BPNL000000000000",
-                                    "issuanceDate": "2023-07-19T09:11:39Z",
-                                    "expirationDate": "2024-12-31T18:30:00Z"
-                                    "credentialSubject": [
-                                      {
-                                        "contractTemplate": "https://public.catena-x.org/contracts/",
-                                        "holderIdentifier": "BPNL000000000000",
-                                        "id": "did:web:localhost:BPNL000000000000",
-                                        "items": [
-                                          "BpnCredential"
-                                        ],
-                                        "type": "SummaryCredential"
-                                      }
-                                    ],
-                                    "proof": {
-                                      "created": "2023-07-19T09:11:41Z",
-                                      "jws": "eyJhbGciOiJFZERTQSJ9..YvoFhDip3TQAfZUIu0yc843oA4uGTg049dMFt_GoaMmPjiNB_B1EFOL-gDpwjIxTYNlGOO_CLp9qStbzlDTNBg",
-                                      "proofPurpose": "proofPurpose",
-                                      "type": "JsonWebSignature2020",
-                                      "verificationMethod": "did:web:localhost:BPNL000000000000#"
-                                    }
-                                  },
-                                  {
-                                    "@context": [
-                                      "https://www.w3.org/2018/credentials/v1",
-                                      "https://catenax-ng.github.io/product-core-schemas/businessPartnerData.json",
-                                      "https://w3id.org/security/suites/jws-2020/v1"
-                                    ],
-                                    "id": "did:web:localhost:BPNL000000000000#f73e3631-ba87-4a03-bea3-b28700056879",
-                                    "type": [
-                                      "VerifiableCredential",
-                                      "BpnCredential"
-                                    ],
-                                    "issuer": "did:web:localhost:BPNL000000000000",
-                                    "issuanceDate": "2023-07-19T09:11:34Z",
-                                    "expirationDate": "2024-12-31T18:30:00Z",
-                                    "credentialSubject": [
-                                      {
-                                        "bpn": "BPNL000000000000",
-                                        "id": "did:web:localhost:BPNL000000000000",
-                                        "type": "BpnCredential"
-                                      }
-                                    ],
-                                    "proof": {
-                                      "created": "2023-07-19T09:11:39Z",
-                                      "jws": "eyJhbGciOiJFZERTQSJ9..fdn2qU85auOltdHDLdHI7sJVV1ZPdftpiXd_ndXN0dFgSDWiIrScdD03wtvKLq_H-shQWfh2RYeMmrlEzAhfDw",
-                                      "proofPurpose": "proofPurpose",
-                                      "type": "JsonWebSignature2020",
-                                      "verificationMethod": "did:web:localhost:BPNL000000000000#"
-                                    }
-                                  }
-                                ],
-                                "pageable": {
-                                  "sort": {
-                                    "empty": false,
-                                    "unsorted": false,
-                                    "sorted": true
-                                  },
-                                  "offset": 0,
-                                  "pageNumber": 0,
-                                  "pageSize": 2147483647,
-                                  "paged": true,
-                                  "unpaged": false
-                                },
-                                "last": true,
-                                "totalPages": 1,
-                                "totalElements": 3,
-                                "first": true,
-                                "size": 2147483647,
-                                "number": 0,
-                                "sort": {
-                                  "empty": false,
-                                  "unsorted": false,
-                                  "sorted": true
-                                },
-                                "numberOfElements": 3,
-                                "empty": false
-                              }
+                               "content": [
+                                 {
+                                   "@context": [
+                                     "https://www.w3.org/2018/credentials/v1",
+                                     "https://catenax-ng.github.io/product-core-schemas/SummaryVC.json",
+                                     "https://w3id.org/security/suites/jws-2020/v1"
+                                   ],
+                                   "id": "did:web:localhost:BPNL000000000000#58fa3811-0ccc-4f0e-882c-d3053c10b8c1",
+                                   "type": [
+                                     "VerifiableCredential",
+                                     "SummaryCredential"
+                                   ],
+                                   "issuer": "did:web:localhost:BPNL000000000000",
+                                   "issuanceDate": "2023-07-19T13:50:02Z",
+                                   "expirationDate": "2024-12-31T18:30:00Z",
+                                   "credentialSubject": [
+                                     {
+                                       "contractTemplate": "https://public.catena-x.org/contracts/",
+                                       "holderIdentifier": "BPNL000000000000",
+                                       "id": "did:web:localhost:BPNL000000000000",
+                                       "items": [
+                                         "BpnCredential",
+                                         "MembershipCredential",
+                                         "DismantlerCredential",
+                                         "BehaviorTwinCredential"
+                                       ],
+                                       "type": "SummaryCredential"
+                                     }
+                                   ],
+                                   "proof": {
+                                     "created": "2023-07-19T13:50:04Z",
+                                     "jws": "eyJhbGciOiJFZERTQSJ9..x_DNxCyA-St3-A30VVU6e7U_vcpLYw8ZcNQq5WY8CG-Ik76iY8OY4UQNEkDbRcLtn_3MYHQfyqyv496Eic5tCQ",
+                                     "proofPurpose": "proofPurpose",
+                                     "type": "JsonWebSignature2020",
+                                     "verificationMethod": "did:web:localhost:BPNL000000000000#"
+                                   }
+                                 },
+                                 {
+                                   "@context": [
+                                     "https://www.w3.org/2018/credentials/v1",
+                                     "https://catenax-ng.github.io/product-core-schemas/SummaryVC.json",
+                                     "https://w3id.org/security/suites/jws-2020/v1"
+                                   ],
+                                   "id": "did:web:localhost:BPNL000000000000#c3869b6e-f63a-4286-9d96-3d0e80c8d169",
+                                   "type": [
+                                     "VerifiableCredential",
+                                     "SummaryCredential"
+                                   ],
+                                   "issuer": "did:web:localhost:BPNL000000000000",
+                                   "issuanceDate": "2023-07-19T13:35:38Z",
+                                   "expirationDate": "2024-12-31T18:30:00Z",
+                                   "credentialSubject": [
+                                     {
+                                       "contractTemplate": "https://public.catena-x.org/contracts/",
+                                       "holderIdentifier": "BPNL000000000000",
+                                       "id": "did:web:localhost:BPNL000000000000",
+                                       "items": [
+                                         "BpnCredential",
+                                         "MembershipCredential",
+                                         "DismantlerCredential",
+                                         "BehaviorTwinCredential"
+                                       ],
+                                       "type": "SummaryCredential"
+                                     }
+                                   ],
+                                   "proof": {
+                                     "created": "2023-07-19T13:35:41Z",
+                                     "jws": "eyJhbGciOiJFZERTQSJ9..CpslShENZpXew-bRoQ1aVOyrPn5x8RJMu50RhYWoZ_D9ExyrlkBatcwU-chLR1IBT2W5bTJZuywZKFtXNol_DA",
+                                     "proofPurpose": "proofPurpose",
+                                     "type": "JsonWebSignature2020",
+                                     "verificationMethod": "did:web:localhost:BPNL000000000000#"
+                                   }
+                                 },
+                                 {
+                                   "@context": [
+                                     "https://www.w3.org/2018/credentials/v1",
+                                     "https://catenax-ng.github.io/product-core-schemas/SummaryVC.json",
+                                     "https://w3id.org/security/suites/jws-2020/v1"
+                                   ],
+                                   "id": "did:web:localhost:BPNL000000000000#6b098a18-c8e9-4168-bdd6-921a4c4b63af",
+                                   "type": [
+                                     "VerifiableCredential",
+                                     "SummaryCredential"
+                                   ],
+                                   "issuer": "did:web:localhost:BPNL000000000000",
+                                   "issuanceDate": "2023-07-19T13:13:58Z",
+                                   "expirationDate": "2024-12-31T18:30:00Z",
+                                   "credentialSubject": [
+                                     {
+                                       "contractTemplate": "https://public.catena-x.org/contracts/",
+                                       "holderIdentifier": "BPNL000000000000",
+                                       "id": "did:web:localhost:BPNL000000000000",
+                                       "items": [
+                                         "BpnCredential",
+                                         "MembershipCredential",
+                                         "DismantlerCredential"
+                                       ],
+                                       "type": "SummaryCredential"
+                                     }
+                                   ],
+                                   "proof": {
+                                     "created": "2023-07-19T13:14:00Z",
+                                     "jws": "eyJhbGciOiJFZERTQSJ9..wA54OY1F6b3OnhrzIroJacnYMAkoXV0LXS4KMw2L886IeWA5NZ2qtPezC5rG_PC2mwy4nRxi4ULf0qMFrV5ECg",
+                                     "proofPurpose": "proofPurpose",
+                                     "type": "JsonWebSignature2020",
+                                     "verificationMethod": "did:web:localhost:BPNL000000000000#"
+                                   }
+                                 },
+                                 {
+                                   "@context": [
+                                     "https://www.w3.org/2018/credentials/v1",
+                                     "https://catenax-ng.github.io/product-core-schemas/SummaryVC.json",
+                                     "https://w3id.org/security/suites/jws-2020/v1"
+                                   ],
+                                   "id": "did:web:localhost:BPNL000000000000#3b032840-3cd8-4e69-9a96-f1a0ccf1e689",
+                                   "type": [
+                                     "VerifiableCredential",
+                                     "SummaryCredential"
+                                   ],
+                                   "issuer": "did:web:localhost:BPNL000000000000",
+                                   "issuanceDate": "2023-07-19T09:11:39Z",
+                                   "expirationDate": "2024-12-31T18:30:00Z",
+                                   "credentialSubject": [
+                                     {
+                                       "contractTemplate": "https://public.catena-x.org/contracts/",
+                                       "holderIdentifier": "BPNL000000000000",
+                                       "id": "did:web:localhost:BPNL000000000000",
+                                       "items": [
+                                         "BpnCredential",
+                                         "MembershipCredential"
+                                       ],
+                                       "type": "SummaryCredential"
+                                     }
+                                   ],
+                                   "proof": {
+                                     "created": "2023-07-19T09:11:41Z",
+                                     "jws": "eyJhbGciOiJFZERTQSJ9..YvoFhDip3TQAfZUIu0yc843oA4uGTg049dMFt_GoaMmPjiNB_B1EFOL-gDpwjIxTYNlGOO_CLp9qStbzlDTNBg",
+                                     "proofPurpose": "proofPurpose",
+                                     "type": "JsonWebSignature2020",
+                                     "verificationMethod": "did:web:localhost:BPNL000000000000#"
+                                   }
+                                 }
+                               ],
+                               "pageable": {
+                                 "sort": {
+                                   "empty": false,
+                                   "sorted": true,
+                                   "unsorted": false
+                                 },
+                                 "offset": 0,
+                                 "pageNumber": 0,
+                                 "pageSize": 2147483647,
+                                 "paged": true,
+                                 "unpaged": false
+                               },
+                               "last": true,
+                               "totalPages": 1,
+                               "totalElements": 4,
+                               "first": true,
+                               "size": 2147483647,
+                               "number": 0,
+                               "sort": {
+                                 "empty": false,
+                                 "sorted": true,
+                                 "unsorted": false
+                               },
+                               "numberOfElements": 4,
+                               "empty": false
+                             }
                             """)
             })
     })
@@ -1189,44 +1240,76 @@ public class IssuersCredentialController extends BaseController {
     @Tag(name = API_TAG_VERIFIABLE_CREDENTIAL_REVOKE)
     @Operation(summary = "Revoke Verifiable Credentials", description = "Permission: **update_wallets** OR **update_wallet** (The BPN of the issuer of the Verifiable Credential must equal BPN of caller) \n\n Revoke Verifiable Credentials")
     @PostMapping(path = RestURI.CREDENTIALS_REVOKE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-
+    @ApiResponse(responseCode = "401", description = "The request could not be completed due to a failed authorization.", content = {@Content(examples = {})})
+    @ApiResponse(responseCode = "403", description = "The request could not be completed due to a forbidden access", content = {@Content(examples = {})})
+    @ApiResponse(responseCode = "500", description = "Any other internal server error", content = {@Content(examples = {
+            @ExampleObject(name = "Internal server error", value = """
+                    {
+                      "type": "about:blank",
+                      "title": "Error Title",
+                      "status": 500,
+                      "detail": "Error Details",
+                      "instance": "API endpoint",
+                      "properties": {
+                        "timestamp": 1689762476720
+                      }
+                    }
+                    """)
+    })})
+    @ApiResponse(responseCode = "404", description = "Wallet not found with caller BPN", content = {@Content(examples = {
+            @ExampleObject(name = "Wallet not found with caller BPN", value = """
+                    {
+                        "type": "about:blank",
+                        "title": "Wallet not found for identifier did:web:localhost:BPNL0000000",
+                        "status": 404,
+                        "detail": "Wallet not found for identifier did:web:localhost:BPNL0000000",
+                        "instance": "/api/wallets/did%3Aweb%3Alocalhost%3ABPNL0000000/credentials",
+                        "properties": {
+                          "timestamp": 1689765541959
+                        }
+                      }
+                    """)
+    })})
+    @ApiResponse(responseCode = "200", description = "Credential revoked", content = {@Content(examples = {})})
     @io.swagger.v3.oas.annotations.parameters.RequestBody(content = {
             @Content(examples = @ExampleObject("""
                                 {
-                                    "@context": [
-                                      "https://www.w3.org/2018/credentials/v1",
-                                      "https://w3id.org/security/suites/jws-2020/v1",
-                                      "https://w3id.org/vc/status-list/2021/v1"
-                                    ],
-                                    "id": "did:web:localhost:BPNL000000000000#983376f8-15bf-47f6-8b43-26e8f63a97f2",
-                                    "type": [
-                                      "VerifiableCredential",
-                                      "BankAccountCredential"
-                                    ],
-                                    "credentialSubject": [
-                                      {
-                                        "name": "Sample Bank",
-                                        "accountNumber": "4567231458"
-                                      }
-                                    ],
-                                    "issuer": "did:web:localhost:BPNL000000000000",
-                                    "issuanceDate": "2023-08-03T06:25:08Z",
-                                    "expirationDate": "2019-06-17T18:56:59Z",
-                                    "credentialStatus": {
-                                      "type": "StatusList2021Entry",
-                                      "id": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation#1",
-                                      "statusPurpose": "revocation",
-                                      "statusListIndex": "1",
-                                      "statusListCredential": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation"
-                                    },
-                                    "proof": {
-                                      "proofPurpose": "proofPurpose",
-                                      "verificationMethod": "did:web:localhost:BPNL000000000000#",
-                                      "type": "JsonWebSignature2020",
-                                      "created": "2023-08-03T06:25:11Z",
-                                      "jws": "eyJhbGciOiJFZERTQSJ9..Zbrle0VMVc2u0BZiI5C5lPo2yIIm4BrhgwzZwS2DFGaCG7rIm1R4LBHSg6kRdp_1x23uVajUv-j5a-PSLoSQCA"
-                                    },
+                                  "@context": [
+                                    "https://www.w3.org/2018/credentials/v1",
+                                    "https://catenax-ng.github.io/product-core-schemas/businessPartnerData.json",
+                                    "https://w3id.org/security/suites/jws-2020/v1",
+                                    "https://w3id.org/vc/status-list/2021/v1"
+                                  ],
+                                  "id": "did:web:localhost:BPNL000000000000#13fead34-93c0-4d7e-8ddb-9dbb7756b72e",
+                                  "type": [
+                                    "VerifiableCredential",
+                                    "BpnCredential"
+                                  ],
+                                  "issuer": "did:web:localhost:BPNL000000000000",
+                                  "issuanceDate": "2023-08-08T06:48:20Z",
+                                  "expirationDate": "2024-12-31T18:30:00Z",
+                                  "credentialStatus": {
+                                    "type": "StatusList2021Entry",
+                                    "id": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation#5",
+                                    "statusPurpose": "revocation",
+                                    "statusListIndex": "5",
+                                    "statusListCredential": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation"
+                                  },
+                                  "credentialSubject": [
+                                    {
+                                      "bpn": "BPNL000000000000",
+                                      "id": "did:web:localhost:BPNL000000000000",
+                                      "type": "BpnCredential"
+                                    }
+                                  ],
+                                  "proof": {
+                                    "proofPurpose": "proofPurpose",
+                                    "verificationMethod": "did:web:localhost:BPNL000000000000#",
+                                    "type": "JsonWebSignature2020",
+                                    "created": "2023-08-08T06:48:25Z",
+                                    "jws": "eyJhbGciOiJFZERTQSJ9..jQQ6tVD5vl11dc_fqTkLkBOzLugQsCQyyaH4S8dE1fgGS19BgXytm6PMs1gyXpyD2RopQISvY2P345rgXpgNCA"
                                   }
+                                }
                     """))
     })
     public ResponseEntity<Void> credentialsRevoke(@RequestBody Map<String, Object> data, Principal principal) {
