@@ -25,6 +25,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
+import com.teketik.test.mockinbean.MockInBean;
 import org.eclipse.tractusx.managedidentitywallets.ManagedIdentityWalletsApplication;
 import org.eclipse.tractusx.managedidentitywallets.config.MIWSettings;
 import org.eclipse.tractusx.managedidentitywallets.config.TestContextInitializer;
@@ -35,9 +36,16 @@ import org.eclipse.tractusx.managedidentitywallets.controller.PresentationContro
 import org.eclipse.tractusx.managedidentitywallets.dao.entity.HoldersCredential;
 import org.eclipse.tractusx.managedidentitywallets.dao.entity.Wallet;
 import org.eclipse.tractusx.managedidentitywallets.dao.repository.HoldersCredentialRepository;
+import org.eclipse.tractusx.managedidentitywallets.exception.CredentialValidationProblem;
+import org.eclipse.tractusx.managedidentitywallets.revocation.client.RevocationClient;
+import org.eclipse.tractusx.managedidentitywallets.revocation.model.StatusVerificationRequest;
+import org.eclipse.tractusx.managedidentitywallets.revocation.model.StatusVerificationResponse;
+import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
+import org.eclipse.tractusx.managedidentitywallets.service.PresentationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.AuthenticationUtils;
 import org.eclipse.tractusx.managedidentitywallets.utils.TestUtils;
 import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistry;
+import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
 import org.eclipse.tractusx.ssi.lib.did.web.DidWebFactory;
 import org.eclipse.tractusx.ssi.lib.exception.DidDocumentResolverNotRegisteredException;
 import org.eclipse.tractusx.ssi.lib.exception.JwtException;
@@ -46,10 +54,14 @@ import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCreden
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialBuilder;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialSubject;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialType;
+import org.eclipse.tractusx.ssi.lib.proof.LinkedDataProofValidation;
+import org.eclipse.tractusx.ssi.lib.proof.SignatureType;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedConstruction;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -80,6 +92,12 @@ class PresentationTest {
 
     @Autowired
     private MIWSettings miwSettings;
+
+    @Autowired
+    private PresentationService presentationService;
+
+    @MockInBean(RevocationService.class)
+    private RevocationClient revocationClient;
 
 
     @Test
@@ -181,19 +199,206 @@ class PresentationTest {
     }
 
     @Test
+    @DisplayName("Create VP as JWT of expired and revoked VC with revocation status check = true and check vc expiry check = true, it should give error with status 400")
+    void createPresentationAsJWTWithExpiredAndRevokedVC400() throws JsonProcessingException {
+        String bpn = UUID.randomUUID().toString();
+        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate).getBody());
+        String audience = "audience";
+
+        VerifiableCredential vc1 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
+
+        //modify expiry date
+        Instant instant = Instant.now().minusSeconds(60);
+        vc1.put("expirationDate", instant.toString());
+
+        Map<String, Object> request = new HashMap<>();
+        request.put(StringPool.HOLDER_IDENTIFIER, wallet.getDid());
+        request.put(StringPool.VERIFIABLE_CREDENTIALS, List.of(objectMapper.readValue(vc1.toJson(), Map.class)));
+        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(bpn);
+        headers.put(HttpHeaders.CONTENT_TYPE, List.of(MediaType.APPLICATION_JSON_VALUE));
+        HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(request), headers);
+
+
+        try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
+            //mock VC verification
+            //mock setup
+            LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
+            utils.when(() -> {
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+            }).thenReturn(mock);
+            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+
+            ///mock revocation
+            Mockito.reset(revocationClient);
+            StatusVerificationResponse statusVerificationResponse = new StatusVerificationResponse();
+            statusVerificationResponse.setRevoked(true);
+            statusVerificationResponse.setSuspended(false);
+            Mockito.when(revocationClient.verify(Mockito.any(StatusVerificationRequest.class))).thenReturn(statusVerificationResponse);
+
+
+            Assertions.assertThrows(CredentialValidationProblem.class, () -> {
+                try {
+                    presentationService.createPresentation(request, true, true, true, audience, bpn);
+                } catch (CredentialValidationProblem credentialValidationProblem) {
+                    Assertions.assertFalse(Boolean.parseBoolean(credentialValidationProblem.getValidationResults().get(0).get(StringPool.VALID).toString()));
+                    Assertions.assertFalse(Boolean.parseBoolean(credentialValidationProblem.getValidationResults().get(0).get(StringPool.VALIDATE_EXPIRY_DATE).toString()));
+                    Assertions.assertTrue(Boolean.parseBoolean(credentialValidationProblem.getValidationResults().get(0).get(StringPool.REVOKED).toString()));
+                    throw credentialValidationProblem;
+                }
+            });
+        }
+    }
+
+    @Test
+    @DisplayName("Create VP as JWT of expired VC and valid VC with revocation status check = false and check vc expiry check = true, it should give error with status 400")
+    void createPresentationAsJWTWithExpiredVC400() throws JsonProcessingException {
+        String bpn = UUID.randomUUID().toString();
+        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate).getBody());
+        String audience = "audience";
+
+        VerifiableCredential vc1 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
+        String invalidVcId = vc1.getId().toString();
+        //modify expiry date
+        Instant instant = Instant.now().minusSeconds(60);
+        vc1.put("expirationDate", instant.toString());
+
+        //valid VC
+        VerifiableCredential vc2 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
+
+        Map<String, Object> request = new HashMap<>();
+        request.put(StringPool.HOLDER_IDENTIFIER, wallet.getDid());
+        request.put(StringPool.VERIFIABLE_CREDENTIALS, List.of(objectMapper.readValue(vc1.toJson(), Map.class), objectMapper.readValue(vc2.toJson(), Map.class)));
+        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(bpn);
+        headers.put(HttpHeaders.CONTENT_TYPE, List.of(MediaType.APPLICATION_JSON_VALUE));
+        HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(request), headers);
+
+        try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
+            //mock VC verification
+            //mock setup
+            LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
+            utils.when(() -> {
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+            }).thenReturn(mock);
+            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+
+            Assertions.assertThrows(CredentialValidationProblem.class, () -> {
+                try {
+                    presentationService.createPresentation(request, true, false, true, audience, bpn);
+                } catch (CredentialValidationProblem credentialValidationProblem) {
+
+                    List<Map<String, Object>> validationResults = credentialValidationProblem.getValidationResults();
+                    validationResults.forEach(data -> {
+                        String string = data.get(StringPool.VC_ID).toString();
+                        if (string.equals(invalidVcId)) {
+                            Assertions.assertFalse(Boolean.parseBoolean(data.get(StringPool.VALID).toString()));
+                            Assertions.assertFalse(Boolean.parseBoolean(data.get(StringPool.VALIDATE_EXPIRY_DATE).toString()));
+                        }
+                    });
+                    throw credentialValidationProblem;
+                } catch (Exception e) {
+                    System.out.println();
+                }
+            });
+        }
+    }
+
+    @Test
+    @DisplayName("Create VP as JWT of revoked VC with revocation status check = true and vc expiry check = false, it should give error with status 400")
+    void createPresentationAsJWTWithRevokedVC400() throws JsonProcessingException {
+        String bpn = UUID.randomUUID().toString();
+        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate).getBody());
+        String audience = "audience";
+
+        VerifiableCredential vc1 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
+        Map<String, Object> request = new HashMap<>();
+        request.put(StringPool.HOLDER_IDENTIFIER, wallet.getDid());
+        request.put(StringPool.VERIFIABLE_CREDENTIALS, List.of(objectMapper.readValue(vc1.toJson(), Map.class)));
+        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(bpn);
+        headers.put(HttpHeaders.CONTENT_TYPE, List.of(MediaType.APPLICATION_JSON_VALUE));
+        HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(request), headers);
+        try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
+            //mock VC verification
+            //mock setup
+            LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
+            utils.when(() -> {
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+            }).thenReturn(mock);
+            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+            ///mock revocation
+            Mockito.reset(revocationClient);
+            StatusVerificationResponse statusVerificationResponse = new StatusVerificationResponse();
+            statusVerificationResponse.setRevoked(true);
+            statusVerificationResponse.setSuspended(false);
+            Mockito.when(revocationClient.verify(Mockito.any(StatusVerificationRequest.class))).thenReturn(statusVerificationResponse);
+
+            Assertions.assertThrows(CredentialValidationProblem.class, () -> {
+                try {
+                    presentationService.createPresentation(request, false, true, true, audience, bpn);
+                } catch (CredentialValidationProblem credentialValidationProblem) {
+                    List<Map<String, Object>> validationResults = credentialValidationProblem.getValidationResults();
+                    Assertions.assertFalse(Boolean.parseBoolean(validationResults.get(0).get(StringPool.VALID).toString()));
+                    Assertions.assertTrue(Boolean.parseBoolean(validationResults.get(0).get(StringPool.REVOKED).toString()));
+                    throw credentialValidationProblem;
+                }
+            });
+            Mockito.reset(revocationClient);
+        }
+
+    }
+
+    @Test
+    @DisplayName("Create VP as JWT from 5 valid VC and check VC expiry = true date and revocation status check = true. It should create VP with status 201")
     void createPresentationAsJWT201() throws JsonProcessingException, ParseException {
         String bpn = UUID.randomUUID().toString();
+        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate).getBody());
+        String audience = "audience";
         String did = DidWebFactory.fromHostnameAndPath(miwSettings.host(), bpn).toString();
-        String audience = "companyA";
-        ResponseEntity<Map> vpResponse = createBpnVCAsJwt(bpn, audience);
-        Assertions.assertEquals(vpResponse.getStatusCode().value(), HttpStatus.CREATED.value());
-        String jwt = vpResponse.getBody().get("vp").toString();
-        SignedJWT signedJWT = SignedJWT.parse(jwt);
-        JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
-        String iss = claimsSet.getStringClaim("iss");
 
-        //issuer of VP is must be holder of VP
-        Assertions.assertEquals(iss, did);
+        VerifiableCredential vc1 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
+        VerifiableCredential vc2 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
+        VerifiableCredential vc3 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
+        VerifiableCredential vc4 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
+        VerifiableCredential vc5 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
+
+        //create request
+        Map<String, Object> request = new HashMap<>();
+        request.put(StringPool.HOLDER_IDENTIFIER, wallet.getDid());
+        request.put(StringPool.VERIFIABLE_CREDENTIALS, List.of(objectMapper.readValue(vc1.toJson(), Map.class),
+                objectMapper.readValue(vc2.toJson(), Map.class),
+                objectMapper.readValue(vc3.toJson(), Map.class),
+                objectMapper.readValue(vc4.toJson(), Map.class),
+                objectMapper.readValue(vc5.toJson(), Map.class)
+        ));
+        try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
+            //mock VC verification
+            //mock setup
+            LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
+            utils.when(() -> {
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+            }).thenReturn(mock);
+            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+
+            ///mock revocation
+            Mockito.reset(revocationClient);
+            StatusVerificationResponse statusVerificationResponse = new StatusVerificationResponse();
+            statusVerificationResponse.setRevoked(false);
+            statusVerificationResponse.setSuspended(false);
+            Mockito.when(revocationClient.verify(Mockito.any(StatusVerificationRequest.class))).thenReturn(statusVerificationResponse);
+
+            Assertions.assertDoesNotThrow(() -> {
+                Map<String, Object> presentation = presentationService.createPresentation(request, true, true, true, audience, bpn);
+
+                String jwt = presentation.get("vp").toString();
+                SignedJWT signedJWT = SignedJWT.parse(jwt);
+                JWTClaimsSet claimsSet = signedJWT.getJWTClaimsSet();
+                String iss = claimsSet.getStringClaim("iss");
+
+                //issuer of VP is must be holder of VP
+                Assertions.assertEquals(iss, did);
+            });
+            Mockito.reset(revocationClient);
+        }
+
     }
 
     private ResponseEntity<Map> createBpnVCAsJwt(String bpn, String audience) throws JsonProcessingException {
@@ -241,34 +446,6 @@ class PresentationTest {
 
         ResponseEntity<Map> vpResponse = restTemplate.exchange(RestURI.API_PRESENTATIONS + "?asJwt={asJwt}&audience={audience}", HttpMethod.POST, entity, Map.class, true, "companyA");
         Assertions.assertEquals(vpResponse.getStatusCode().value(), HttpStatus.NOT_FOUND.value());
-    }
-
-    @Test
-    void createPresentationWithMoreThenOneVC400() throws JsonProcessingException {
-        String bpn = UUID.randomUUID().toString();
-        String didWeb = DidWebFactory.fromHostnameAndPath(miwSettings.host(), bpn).toString();
-
-        ResponseEntity<String> response = TestUtils.createWallet(bpn, bpn, restTemplate);
-        Assertions.assertEquals(response.getStatusCode().value(), HttpStatus.CREATED.value());
-        Wallet wallet = TestUtils.getWalletFromString(response.getBody());
-
-        //get BPN credentials
-        List<HoldersCredential> credentials = holdersCredentialRepository.getByHolderDidAndType(wallet.getDid(), MIWVerifiableCredentialType.BPN_CREDENTIAL);
-        Assertions.assertFalse(credentials.isEmpty());
-        Map<String, Object> map = objectMapper.readValue(credentials.get(0).getData().toJson(), Map.class);
-
-        //create request
-        Map<String, Object> request = new HashMap<>();
-        request.put(StringPool.HOLDER_IDENTIFIER, wallet.getDid());
-        request.put(StringPool.VERIFIABLE_CREDENTIALS, List.of(map, map));
-
-        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders("invalid bpn");
-        headers.put(HttpHeaders.CONTENT_TYPE, List.of(MediaType.APPLICATION_JSON_VALUE));
-
-        HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(request), headers);
-
-        ResponseEntity<Map> vpResponse = restTemplate.exchange(RestURI.API_PRESENTATIONS + "?asJwt={asJwt}&audience={audience}", HttpMethod.POST, entity, Map.class, true, "companyA");
-        Assertions.assertEquals(vpResponse.getStatusCode().value(), HttpStatus.BAD_REQUEST.value());
     }
 
     @NotNull
