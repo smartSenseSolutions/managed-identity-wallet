@@ -99,7 +99,7 @@ public class CredentialService {
         boolean isRevoked = commonService.validateRevocation(withRevocation, verifiableCredential, response);
 
         response.put(StringPool.VALID, valid && dateValidation && !isRevoked);
-        response.put("vc", verifiableCredential);
+        response.put(StringPool.VC, verifiableCredential);
 
         return response;
     }

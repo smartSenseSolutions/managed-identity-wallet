@@ -97,4 +97,7 @@ public class StringPool {
     public static final String SUSPENSION = "suspension";
 
     public static final String VALIDATION_RESULTS = "validationResults";
+
+    public static final String VC = "vc";
+    public static final String VC_ID = "vcId";
 }

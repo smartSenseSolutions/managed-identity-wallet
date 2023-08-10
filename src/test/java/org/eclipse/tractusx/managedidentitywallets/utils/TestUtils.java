@@ -37,21 +37,20 @@ import org.eclipse.tractusx.managedidentitywallets.dao.repository.WalletReposito
 import org.eclipse.tractusx.managedidentitywallets.dto.CreateWalletRequest;
 import org.eclipse.tractusx.managedidentitywallets.dto.IssueFrameworkCredentialRequest;
 import org.eclipse.tractusx.managedidentitywallets.dto.IssueMembershipCredentialRequest;
+import org.eclipse.tractusx.managedidentitywallets.revocation.client.RevocationClient;
+import org.eclipse.tractusx.managedidentitywallets.revocation.model.StatusEntryRequest;
 import org.eclipse.tractusx.ssi.lib.model.did.DidDocument;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialStatusList2021Entry;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialSubject;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.*;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.junit.jupiter.api.Assertions;
+import org.mockito.Mockito;
 import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 
 import java.net.URI;
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -113,6 +112,12 @@ public class TestUtils {
         return walletRepository.save(wallet);
     }
 
+    /**
+     * Check vc.
+     *
+     * @param verifiableCredential the verifiable credential
+     * @param miwSettings          the miw settings
+     */
     public static void checkVC(VerifiableCredential verifiableCredential, MIWSettings miwSettings) {
         List<URI> links = new ArrayList<>(miwSettings.vcContexts());
 
@@ -129,6 +134,7 @@ public class TestUtils {
      *
      * @param verifiableCredential the verifiable credential
      * @param miwSettings          the miw settings
+     * @param revocationSettings   the revocation settings
      */
     public static void checkVC(VerifiableCredential verifiableCredential, MIWSettings miwSettings, RevocationSettings revocationSettings) {
         List<URI> links = new ArrayList<>(miwSettings.vcContexts());
@@ -305,4 +311,54 @@ public class TestUtils {
         return statusMap;
     }
 
+
+    /**
+     * Issue random vc verifiable credential.
+     *
+     * @param holderDid        the holder did
+     * @param issuerDid        the issuer did
+     * @param miwSettings      the miw settings
+     * @param objectMapper     the object mapper
+     * @param revocationClient the revocation client
+     * @param restTemplate     the rest template
+     * @return the verifiable credential
+     * @throws JsonProcessingException the json processing exception
+     */
+    public static VerifiableCredential issueRandomVC(String holderDid, String issuerDid, MIWSettings miwSettings, ObjectMapper objectMapper, RevocationClient revocationClient, TestRestTemplate restTemplate) throws JsonProcessingException {
+
+        String type = UUID.randomUUID().toString();
+        //VC Bulider
+        VerifiableCredentialBuilder verifiableCredentialBuilder =
+                new VerifiableCredentialBuilder();
+
+        //VC Subject
+        VerifiableCredentialSubject verifiableCredentialSubject =
+                new VerifiableCredentialSubject(Map.of("type", UUID.randomUUID().toString()));
+
+        //Using Builder
+        VerifiableCredential credentialWithoutProof =
+                verifiableCredentialBuilder
+                        .id(URI.create(issuerDid + "#" + UUID.randomUUID()))
+                        .context(miwSettings.vcContexts())
+                        .type(List.of(VerifiableCredentialType.VERIFIABLE_CREDENTIAL, type))
+                        .issuer(URI.create(issuerDid)) //issuer must be base wallet
+                        .expirationDate(miwSettings.vcExpiryDate().toInstant())
+                        .issuanceDate(Instant.now())
+                        .credentialSubject(verifiableCredentialSubject)
+                        .build();
+
+        Map<String, Objects> map = objectMapper.readValue(credentialWithoutProof.toJson(), Map.class);
+
+        Map<String, Object> statusMap = TestUtils.getStatusListentry();
+
+        //mock revocation service
+        Mockito.when(revocationClient.statusEntry(Mockito.anyString(), Mockito.any(StatusEntryRequest.class))).thenReturn(statusMap);
+
+        //issue Revocable VC
+        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(miwSettings.authorityWalletBpn());
+        HttpEntity<Map> entity = new HttpEntity<>(map, headers);
+        ResponseEntity<String> response = restTemplate.exchange(RestURI.ISSUERS_CREDENTIALS + "?holderDid={did}&revocable={revocable}", HttpMethod.POST, entity, String.class, holderDid, true);
+        Assertions.assertEquals(HttpStatus.CREATED.value(), response.getStatusCode().value());
+        return new VerifiableCredential(objectMapper.readValue(response.getBody(), Map.class));
+    }
 }

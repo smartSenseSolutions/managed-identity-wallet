@@ -269,6 +269,8 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
             if (!Boolean.parseBoolean(map.get(StringPool.VALID).toString())) {
                 log.info("Invalid VC with ID - {}, validation response - {}", StringEscapeUtils.escapeJava(vc.getId().toString()), map);
             }
+            map.put(StringPool.VC_ID, vc.getId().toString());
+            map.remove(StringPool.VC);
             validationResults.add(map);
         });
 
