@@ -31,6 +31,7 @@ import org.eclipse.tractusx.managedidentitywallets.config.TestContextInitializer
 import org.eclipse.tractusx.managedidentitywallets.constant.MIWVerifiableCredentialType;
 import org.eclipse.tractusx.managedidentitywallets.constant.RestURI;
 import org.eclipse.tractusx.managedidentitywallets.constant.StringPool;
+import org.eclipse.tractusx.managedidentitywallets.controller.CredentialController;
 import org.eclipse.tractusx.managedidentitywallets.controller.IssuersCredentialController;
 import org.eclipse.tractusx.managedidentitywallets.dao.entity.HoldersCredential;
 import org.eclipse.tractusx.managedidentitywallets.dao.repository.HoldersCredentialRepository;
@@ -89,7 +90,10 @@ class HoldersCredentialTest {
     private TestRestTemplate restTemplate;
 
     @Autowired
-    private IssuersCredentialController credentialController;
+    private IssuersCredentialController issuersCredentialController;
+
+    @Autowired
+    private CredentialController credentialController;
 
     @MockInBean(RevocationService.class)
     private RevocationClient revocationClient;
@@ -101,10 +105,7 @@ class HoldersCredentialTest {
         String did = DidWebFactory.fromHostnameAndPath(miwSettings.host(), bpn).toString();
         String type = "TestCredential";
         HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders("not valid BPN");
-
         ResponseEntity<String> response = issueVC(bpn, did, type, headers, false, Map.of());
-
-
         Assertions.assertEquals(HttpStatus.FORBIDDEN.value(), response.getStatusCode().value());
     }
 
@@ -145,20 +146,14 @@ class HoldersCredentialTest {
 
     @Test
     void getCredentialsTest403() {
-
         HttpHeaders headers = AuthenticationUtils.getInvalidUserHttpHeaders();
-
         HttpEntity<CreateWalletRequest> entity = new HttpEntity<>(headers);
-
         ResponseEntity<Map> response = restTemplate.exchange(RestURI.CREDENTIALS, HttpMethod.GET, entity, Map.class);
-
         Assertions.assertEquals(HttpStatus.FORBIDDEN.value(), response.getStatusCode().value());
     }
 
     @Test
     void getCredentials200() throws com.fasterxml.jackson.core.JsonProcessingException {
-
-
         String baseDID = miwSettings.authorityWalletDid();
         String bpn = UUID.randomUUID().toString();
         String did = DidWebFactory.fromHostnameAndPath(miwSettings.host(), bpn).toString();
@@ -229,7 +224,7 @@ class HoldersCredentialTest {
     @Test
     void validateCredentialsWithInvalidVC() throws com.fasterxml.jackson.core.JsonProcessingException {
         //data setup
-        Map<String, Object> map = issueVC();
+        VerifiableCredential credential = issueVC();
 
         //service call
         try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
@@ -241,7 +236,7 @@ class HoldersCredentialTest {
             }).thenReturn(mock);
             Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(false);
 
-            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(map, false, false).getBody();
+            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(credential, false, false).getBody();
             Assertions.assertFalse(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
         }
     }
@@ -252,7 +247,7 @@ class HoldersCredentialTest {
     void validateCredentialsWithExpiryCheckTrue() throws com.fasterxml.jackson.core.JsonProcessingException {
 
         //data setup
-        Map<String, Object> map = issueVC();
+        VerifiableCredential credential = issueVC();
 
         //service call
         try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
@@ -264,7 +259,7 @@ class HoldersCredentialTest {
             }).thenReturn(mock);
             Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
 
-            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(map, true, false).getBody();
+            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(credential, true, false).getBody();
             Assertions.assertTrue(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
             Assertions.assertTrue(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALIDATE_EXPIRY_DATE).toString()));
         }
@@ -286,7 +281,6 @@ class HoldersCredentialTest {
         Assertions.assertEquals(HttpStatus.CREATED.value(), response.getStatusCode().value());
 
         VerifiableCredential verifiableCredential = new VerifiableCredential(new ObjectMapper().readValue(response.getBody(), Map.class));
-        Map<String, Object> map = objectMapper.readValue(verifiableCredential.toJson(), Map.class);
 
         //service call
         try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
@@ -307,7 +301,7 @@ class HoldersCredentialTest {
             statusVerificationResponse.setSuspended(false);
             Mockito.when(revocationClient.verify(Mockito.any(StatusVerificationRequest.class))).thenReturn(statusVerificationResponse);
 
-            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(map, false, true).getBody();
+            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(verifiableCredential, false, true).getBody();
             Assertions.assertTrue(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
             Assertions.assertFalse(Boolean.parseBoolean(stringObjectMap.get(StringPool.REVOKED).toString()));
             Mockito.reset(revocationClient);
@@ -315,7 +309,7 @@ class HoldersCredentialTest {
             //mock revocation to return revoked=ture
             statusVerificationResponse.setRevoked(true);
             Mockito.when(revocationClient.verify(Mockito.any(StatusVerificationRequest.class))).thenReturn(statusVerificationResponse);
-            stringObjectMap = credentialController.credentialsValidation(map, false, true).getBody();
+            stringObjectMap = credentialController.credentialsValidation(verifiableCredential, false, true).getBody();
             Assertions.assertFalse(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
             Assertions.assertTrue(Boolean.parseBoolean(stringObjectMap.get(StringPool.REVOKED).toString()));
             Mockito.reset(revocationClient);
@@ -328,10 +322,10 @@ class HoldersCredentialTest {
     void validateCredentialsWithoutStatusListEntryWithRevocationTure() throws com.fasterxml.jackson.core.JsonProcessingException {
 
         //data setup
-        Map<String, Object> map = issueVC();
+        VerifiableCredential credential = issueVC();
         //modify expiry date
         Instant instant = Instant.now().minusSeconds(60);
-        map.put("expirationDate", instant.toString());
+        credential.put("expirationDate", instant.toString());
 
         //service call
         try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
@@ -342,7 +336,7 @@ class HoldersCredentialTest {
             }).thenReturn(mock);
             Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
             Assertions.assertThrows(BadDataException.class, () -> {
-                credentialController.credentialsValidation(map, false, true);
+                credentialController.credentialsValidation(credential, false, true);
             });
         }
     }
@@ -352,11 +346,10 @@ class HoldersCredentialTest {
     void validateCredentialsWithExpiryCheckFalse() throws com.fasterxml.jackson.core.JsonProcessingException {
 
         //data setup
-        Map<String, Object> map = issueVC();
+        VerifiableCredential credential = issueVC();
         //modify expiry date
         Instant instant = Instant.now().minusSeconds(60);
-        map.put("expirationDate", instant.toString());
-
+        credential.put("expirationDate", instant.toString());
 
         //service call
         try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
@@ -368,7 +361,7 @@ class HoldersCredentialTest {
             }).thenReturn(mock);
             Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
 
-            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(map, false, false).getBody();
+            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(credential, false, false).getBody();
             Assertions.assertTrue(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
         }
     }
@@ -379,10 +372,10 @@ class HoldersCredentialTest {
     void validateExpiredCredentialsWithExpiryCheckTrue() throws com.fasterxml.jackson.core.JsonProcessingException {
 
         //data setup
-        Map<String, Object> map = issueVC();
+        VerifiableCredential credential = issueVC();
         //modify expiry date
         Instant instant = Instant.now().minusSeconds(60);
-        map.put("expirationDate", instant.toString());
+        credential.put("expirationDate", instant.toString());
 
         //service call
         try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
@@ -394,7 +387,7 @@ class HoldersCredentialTest {
             }).thenReturn(mock);
             Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
 
-            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(map, true, false).getBody();
+            Map<String, Object> stringObjectMap = credentialController.credentialsValidation(credential, true, false).getBody();
             Assertions.assertFalse(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
             Assertions.assertFalse(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALIDATE_EXPIRY_DATE).toString()));
 
@@ -448,14 +441,13 @@ class HoldersCredentialTest {
     }
 
 
-    private Map<String, Object> issueVC() throws JsonProcessingException {
+    private VerifiableCredential issueVC() throws JsonProcessingException {
         String bpn = UUID.randomUUID().toString();
         HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(bpn);
         TestUtils.createWallet(bpn, "Test", restTemplate);
         ResponseEntity<String> vc = TestUtils.issueMembershipVC(restTemplate, bpn, miwSettings.authorityWalletBpn());
         VerifiableCredential verifiableCredential = new VerifiableCredential(new ObjectMapper().readValue(vc.getBody(), Map.class));
-        Map<String, Object> map = objectMapper.readValue(verifiableCredential.toJson(), Map.class);
-        return map;
+        return verifiableCredential;
     }
 
 

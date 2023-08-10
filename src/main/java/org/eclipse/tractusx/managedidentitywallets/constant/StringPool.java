@@ -95,4 +95,6 @@ public class StringPool {
     public static final String REVOCATION = "revocation";
 
     public static final String SUSPENSION = "suspension";
+
+    public static final String VALIDATION_RESULTS = "validationResults";
 }

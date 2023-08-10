@@ -106,7 +106,7 @@ class PresentationTest {
         ResponseEntity<Map> vpResponse = createBpnVCAsJwt(bpn, audience);
         Map body = vpResponse.getBody();
 
-        ResponseEntity<Map<String, Object>> mapResponseEntity = presentationController.validatePresentation(body, null, true, false);
+        ResponseEntity<Map<String, Object>> mapResponseEntity = presentationController.validatePresentation(body, null, true, false, false);
 
         Map map = mapResponseEntity.getBody();
         Assertions.assertTrue(Boolean.parseBoolean(map.get(StringPool.VALID).toString()));
@@ -133,7 +133,7 @@ class PresentationTest {
 
             Thread.sleep(62000L); // need to remove this??? Can not mock 2 object creation using new
 
-            ResponseEntity<Map<String, Object>> mapResponseEntity = presentationController.validatePresentation(body, "no valid", true, true);
+            ResponseEntity<Map<String, Object>> mapResponseEntity = presentationController.validatePresentation(body, "no valid", true, true, false);
 
             Map map = mapResponseEntity.getBody();
 
@@ -153,7 +153,7 @@ class PresentationTest {
         ResponseEntity<Map> vpResponse = createBpnVCAsJwt(bpn, audience);
         Map body = vpResponse.getBody();
 
-        ResponseEntity<Map<String, Object>> mapResponseEntity = presentationController.validatePresentation(body, audience, true, true);
+        ResponseEntity<Map<String, Object>> mapResponseEntity = presentationController.validatePresentation(body, audience, true, true, false);
 
         Map map = mapResponseEntity.getBody();
         Assertions.assertTrue(Boolean.parseBoolean(map.get(StringPool.VALID).toString()));
@@ -171,7 +171,7 @@ class PresentationTest {
         ResponseEntity<Map> vpResponse = getIssueVPRequestWithShortExpiry(bpn, audience);
         Map body = vpResponse.getBody();
 
-        ResponseEntity<Map<String, Object>> mapResponseEntity = presentationController.validatePresentation(body, audience, true, true);
+        ResponseEntity<Map<String, Object>> mapResponseEntity = presentationController.validatePresentation(body, audience, true, true, false);
 
         Map map = mapResponseEntity.getBody();
         Assertions.assertFalse(Boolean.parseBoolean(map.get(StringPool.VALID).toString()));
