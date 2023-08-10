@@ -188,9 +188,11 @@ public class PresentationController extends BaseController {
     })
     public ResponseEntity<Map<String, Object>> createPresentation(@RequestBody Map<String, Object> data,
                                                                   @RequestParam(name = "audience", required = false) String audience,
-                                                                  @RequestParam(name = "asJwt", required = false, defaultValue = "false") boolean asJwt, Principal principal
+                                                                  @RequestParam(name = "asJwt", required = false, defaultValue = "false") boolean asJwt,
+                                                                  @Parameter(description = "Check expiry of VC provided in request to create VP") @RequestParam(name = "withCredentialExpiryDate", required = false, defaultValue = "false") boolean withCredentialExpiryDate,
+                                                                  @Parameter(description = "Check check revocation status of VC provided in request to create VP") @RequestParam(name = "withCredentialRevocation", required = false, defaultValue = "false") boolean withCredentialRevocation, Principal principal
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(presentationService.createPresentation(data, asJwt, audience, getBPNFromToken(principal)));
+        return ResponseEntity.status(HttpStatus.CREATED).body(presentationService.createPresentation(data, withCredentialExpiryDate, withCredentialRevocation, asJwt, audience, getBPNFromToken(principal)));
     }
 
     /**
@@ -234,22 +236,22 @@ public class PresentationController extends BaseController {
                     }
                     """),
             @ExampleObject(name = "Response in case of invalid data provided", value = """
+                     {
+                         "type": "about:blank",
+                         "title": "Invalid data provided",
+                         "status": 400,
+                         "detail": "details",
+                         "instance": "API endpoint",
+                         "properties":
+                         {
+                             "timestamp": 1689760833962,
+                             "errors":
                              {
-                                 "type": "about:blank",
-                                 "title": "Invalid data provided",
-                                 "status": 400,
-                                 "detail": "details",
-                                 "instance": "API endpoint",
-                                 "properties":
-                                 {
-                                     "timestamp": 1689760833962,
-                                     "errors":
-                                     {
-                                         "filed": "filed error message"
-                                     }
-                                 }
+                                 "filed": "filed error message"
                              }
-                            """)
+                         }
+                     }
+                    """)
     })})
     @ApiResponse(responseCode = "200", description = "Verifiable presentation validate", content = {
             @Content(examples = {
@@ -329,8 +331,9 @@ public class PresentationController extends BaseController {
     public ResponseEntity<Map<String, Object>> validatePresentation(@RequestBody Map<String, Object> data,
                                                                     @Parameter(description = "Audience to validate in VP (Only supported in case of JWT formatted VP)") @RequestParam(name = "audience", required = false) String audience,
                                                                     @Parameter(description = "Pass true in case of VP is in JWT format") @RequestParam(name = "asJwt", required = false, defaultValue = "false") boolean asJwt,
-                                                                    @Parameter(description = "Check expiry of VC(Only supported in case of JWT formatted VP)") @RequestParam(name = "withCredentialExpiryDate", required = false, defaultValue = "false") boolean withCredentialExpiryDate
+                                                                    @Parameter(description = "Check expiry of VCs that are part of VP(Only supported in case of JWT formatted VP)") @RequestParam(name = "withCredentialExpiryDate", required = false, defaultValue = "false") boolean withCredentialExpiryDate,
+                                                                    @Parameter(description = "Check check revocation status of VCs that are part of VP(Only supported in case of JWT formatted VP)") @RequestParam(name = "withCredentialRevocation", required = false, defaultValue = "false") boolean withCredentialRevocation
     ) {
-        return ResponseEntity.status(HttpStatus.OK).body(presentationService.validatePresentation(data, asJwt, withCredentialExpiryDate, audience));
+        return ResponseEntity.status(HttpStatus.OK).body(presentationService.validatePresentation(data, asJwt, withCredentialExpiryDate, withCredentialRevocation, audience));
     }
 }

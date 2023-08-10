@@ -24,6 +24,7 @@ package org.eclipse.tractusx.managedidentitywallets.config;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.tractusx.managedidentitywallets.constant.StringPool;
 import org.eclipse.tractusx.managedidentitywallets.exception.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -105,6 +106,20 @@ public class ExceptionHandling {
         return problemDetail;
     }
 
+    /**
+     * Handl credential validation problem problem detail.
+     *
+     * @param e the e
+     * @return the problem detail
+     */
+    @ExceptionHandler(CredentialValidationProblem.class)
+    ProblemDetail handleCredentialValidationProblem(CredentialValidationProblem e) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+        problemDetail.setTitle(e.getMessage());
+        problemDetail.setProperty(TIMESTAMP, System.currentTimeMillis());
+        problemDetail.setProperty(StringPool.VALIDATION_RESULTS, e.getValidationResults());
+        return problemDetail;
+    }
 
     /**
      * Handle validation problem detail.

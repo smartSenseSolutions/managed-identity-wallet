@@ -29,12 +29,14 @@ import com.smartsensesolutions.java.commons.specification.SpecificationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.tractusx.managedidentitywallets.config.MIWSettings;
 import org.eclipse.tractusx.managedidentitywallets.constant.StringPool;
 import org.eclipse.tractusx.managedidentitywallets.dao.entity.HoldersCredential;
 import org.eclipse.tractusx.managedidentitywallets.dao.entity.Wallet;
 import org.eclipse.tractusx.managedidentitywallets.dao.repository.HoldersCredentialRepository;
 import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
+import org.eclipse.tractusx.managedidentitywallets.exception.CredentialValidationProblem;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
 import org.eclipse.tractusx.ssi.lib.crypt.ed25519.Ed25519Key;
 import org.eclipse.tractusx.ssi.lib.crypt.octet.OctetKeyPairFactory;
@@ -43,9 +45,7 @@ import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistry;
 import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
 import org.eclipse.tractusx.ssi.lib.did.web.DidWebDocumentResolver;
 import org.eclipse.tractusx.ssi.lib.did.web.util.DidWebParser;
-import org.eclipse.tractusx.ssi.lib.exception.InvalidJsonLdException;
 import org.eclipse.tractusx.ssi.lib.exception.InvalidePrivateKeyFormat;
-import org.eclipse.tractusx.ssi.lib.exception.UnsupportedSignatureTypeException;
 import org.eclipse.tractusx.ssi.lib.jwt.SignedJwtFactory;
 import org.eclipse.tractusx.ssi.lib.jwt.SignedJwtValidator;
 import org.eclipse.tractusx.ssi.lib.jwt.SignedJwtVerifier;
@@ -55,8 +55,6 @@ import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCreden
 import org.eclipse.tractusx.ssi.lib.model.verifiable.presentation.VerifiablePresentation;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.presentation.VerifiablePresentationBuilder;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.presentation.VerifiablePresentationType;
-import org.eclipse.tractusx.ssi.lib.proof.LinkedDataProofValidation;
-import org.eclipse.tractusx.ssi.lib.proof.SignatureType;
 import org.eclipse.tractusx.ssi.lib.serialization.jsonLd.JsonLdSerializerImpl;
 import org.eclipse.tractusx.ssi.lib.serialization.jwt.SerializedJwtPresentationFactory;
 import org.eclipse.tractusx.ssi.lib.serialization.jwt.SerializedJwtPresentationFactoryImpl;
@@ -78,7 +76,6 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
 
     private final HoldersCredentialRepository holdersCredentialRepository;
 
-
     private final SpecificationUtil<HoldersCredential> credentialSpecificationUtil;
 
     private final CommonService commonService;
@@ -88,6 +85,8 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
     private final MIWSettings miwSettings;
 
     private final ObjectMapper objectMapper;
+
+    private final CredentialService credentialService;
 
     @Override
     protected BaseRepository<HoldersCredential, Long> getRepository() {
@@ -102,14 +101,16 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
     /**
      * Create presentation map.
      *
-     * @param data      the data
-     * @param asJwt     the as jwt
-     * @param audience  the audience
-     * @param callerBpn the caller bpn
+     * @param data                     the data
+     * @param withCredentialExpiryDate the with credential expiry date
+     * @param withCredentialRevocation the with credential revocation
+     * @param asJwt                    the as jwt
+     * @param audience                 the audience
+     * @param callerBpn                the caller bpn
      * @return the map
      */
     @SneakyThrows({InvalidePrivateKeyFormat.class})
-    public Map<String, Object> createPresentation(Map<String, Object> data, boolean asJwt, String audience, String callerBpn) {
+    public Map<String, Object> createPresentation(Map<String, Object> data, boolean withCredentialExpiryDate, boolean withCredentialRevocation, boolean asJwt, String audience, String callerBpn) {
         List<Map<String, Object>> verifiableCredentialList = (List<Map<String, Object>>) data.get(StringPool.VERIFIABLE_CREDENTIALS);
 
         //only support one credential at a time to create VP
@@ -123,6 +124,9 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
             VerifiableCredential verifiableCredential = new VerifiableCredential(map);
             verifiableCredentials.add(verifiableCredential);
         });
+
+        //validate all VCs
+        validateCredentials(withCredentialExpiryDate, withCredentialRevocation, verifiableCredentials);
 
         Map<String, Object> response = new HashMap<>();
         if (asJwt) {
@@ -160,18 +164,18 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
         return response;
     }
 
-
     /**
      * Validate presentation map.
      *
      * @param vp                       the vp
      * @param asJwt                    the as jwt
      * @param withCredentialExpiryDate the with credential expiry date
+     * @param withCredentialRevocation the with credential revocation
      * @param audience                 the audience
      * @return the map
      */
     @SneakyThrows
-    public Map<String, Object> validatePresentation(Map<String, Object> vp, boolean asJwt, boolean withCredentialExpiryDate, String audience) {
+    public Map<String, Object> validatePresentation(Map<String, Object> vp, boolean asJwt, boolean withCredentialExpiryDate, boolean withCredentialRevocation, String audience) {
 
         Map<String, Object> response = new HashMap<>();
         if (asJwt) {
@@ -183,6 +187,15 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
 
             SignedJWT signedJWT = SignedJWT.parse(jwt);
 
+            //validate VCs
+            Map<String, Object> claims = objectMapper.readValue(signedJWT.getPayload().toBytes(), Map.class);
+            String vpClaim = objectMapper.writeValueAsString(claims.get("vp"));
+            JsonLdSerializerImpl jsonLdSerializer = new JsonLdSerializerImpl();
+            VerifiablePresentation presentation = jsonLdSerializer.deserializePresentation(new SerializedVerifiablePresentation(vpClaim));
+            List<VerifiableCredential> verifiableCredentials = presentation.getVerifiableCredentials();
+            validateCredentials(withCredentialExpiryDate, withCredentialRevocation, verifiableCredentials);
+
+            //validate JWT sig.
             boolean validateSignature = validateSignature(signedJWT);
 
             //validate audience
@@ -192,30 +205,10 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
             boolean validateJWTExpiryDate = validateJWTExpiryDate(signedJWT);
             response.put(StringPool.VALIDATE_JWT_EXPIRY_DATE, validateJWTExpiryDate);
 
-            boolean validCredential = true;
-            boolean validateExpiryDate = true;
-            try {
-                Map<String, Object> claims = objectMapper.readValue(signedJWT.getPayload().toBytes(), Map.class);
-                String vpClaim = objectMapper.writeValueAsString(claims.get("vp"));
-
-                JsonLdSerializerImpl jsonLdSerializer = new JsonLdSerializerImpl();
-                VerifiablePresentation presentation = jsonLdSerializer.deserializePresentation(new SerializedVerifiablePresentation(vpClaim));
-
-                for (VerifiableCredential credential : presentation.getVerifiableCredentials()) {
-                    validateExpiryDate = CommonService.validateExpiry(withCredentialExpiryDate, credential, response);
-                    if (!validateCredential(credential)) {
-                        validCredential = false;
-                    }
-                }
-            } catch (InvalidJsonLdException e) {
-                throw new BadDataException(String.format("Validation of VP in form of JSON-LD is not supported. Invalid Json-LD: %s", e.getMessage()));
-            }
-
-            response.put(StringPool.VALID, (validateSignature && validateAudience && validateExpiryDate && validCredential && validateJWTExpiryDate));
+            response.put(StringPool.VALID, (validateSignature && validateAudience && validateJWTExpiryDate));
 
             if (StringUtils.hasText(audience)) {
                 response.put(StringPool.VALIDATE_AUDIENCE, validateAudience);
-
             }
 
         } else {
@@ -267,34 +260,22 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
         }
     }
 
-    private boolean validateCredential(VerifiableCredential credential)
-            throws UnsupportedSignatureTypeException {
-        DidDocumentResolverRegistry didDocumentResolverRegistry = new DidDocumentResolverRegistryImpl();
-        didDocumentResolverRegistry.register(
-                new DidWebDocumentResolver(HttpClient.newHttpClient(), new DidWebParser(), miwSettings.enforceHttps()));
 
-        String proofType = credential.getProof().getType();
-        LinkedDataProofValidation linkedDataProofValidation;
-        if (SignatureType.ED21559.toString().equals(proofType)) {
-            linkedDataProofValidation = LinkedDataProofValidation.newInstance(
-                    SignatureType.ED21559,
-                    didDocumentResolverRegistry
-            );
-        } else if (SignatureType.JWS.toString().equals(proofType)) {
-            linkedDataProofValidation = LinkedDataProofValidation.newInstance(
-                    SignatureType.JWS,
-                    didDocumentResolverRegistry
-            );
-        } else {
-            throw new UnsupportedSignatureTypeException(proofType);
-        }
+    private void validateCredentials(boolean withCredentialExpiryDate, boolean withCredentialRevocation, List<VerifiableCredential> verifiableCredentials) {
+        //validate VCs
+        List<Map<String, Object>> validationResults = new ArrayList<>();
+        verifiableCredentials.parallelStream().forEach(vc -> {
+            Map<String, Object> map = credentialService.credentialsValidation(vc, withCredentialExpiryDate, withCredentialRevocation);
+            if (!Boolean.parseBoolean(map.get(StringPool.VALID).toString())) {
+                log.info("Invalid VC with ID - {}, validation response - {}", StringEscapeUtils.escapeJava(vc.getId().toString()), map);
+            }
+            validationResults.add(map);
+        });
 
-        boolean isValid = linkedDataProofValidation.verifiyProof(credential);
-        if (isValid) {
-            log.debug("Credential validation result: (valid: {}, credential-id: {})", isValid, credential.getId());
-        } else {
-            log.info("Credential validation result: (valid: {}, credential-id: {})", isValid, credential.getId());
-        }
-        return isValid;
+        //check valid status of each VC, throw error if any one is invalid with details
+        validationResults.forEach(result -> {
+            Validate.isFalse(Boolean.parseBoolean(result.get(StringPool.VALID).toString())).launch(new CredentialValidationProblem(validationResults, "One or more VCs are invalid"));
+        });
     }
+
 }

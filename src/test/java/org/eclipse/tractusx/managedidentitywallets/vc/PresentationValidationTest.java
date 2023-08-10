@@ -78,7 +78,7 @@ class PresentationValidationTest {
     private MIWSettings miwSettings;
 
     private final String bpnTenant_1 = UUID.randomUUID().toString();
-    private  final String bpnTenant_2 = UUID.randomUUID().toString();
+    private final String bpnTenant_2 = UUID.randomUUID().toString();
     private String bpnOperator;
     private Did tenant_1;
     private Did tenant_2;
@@ -111,7 +111,7 @@ class PresentationValidationTest {
     }
 
     @AfterEach
-    public void cleanUp(){
+    public void cleanUp() {
         try {
             Wallet tenantWallet = walletService.getWalletByIdentifier(bpnTenant_1, false, bpnOperator);
             walletService.delete(tenantWallet.getId());
@@ -196,8 +196,7 @@ class PresentationValidationTest {
     }
 
     private Map<String, Object> createPresentationJwt(VerifiableCredential verifiableCredential, Did issuer) {
-        return presentationService.createPresentation(Map.of(StringPool.VERIFIABLE_CREDENTIALS, List.of(verifiableCredential)),
-                true, issuer.toString(), issuer.toString());
+        return presentationService.createPresentation(Map.of(StringPool.VERIFIABLE_CREDENTIALS, List.of(verifiableCredential)), false, false, true, issuer.toString(), issuer.toString());
     }
 
     @Getter

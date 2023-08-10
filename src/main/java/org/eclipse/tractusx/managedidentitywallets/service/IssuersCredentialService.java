@@ -47,14 +47,11 @@ import org.eclipse.tractusx.managedidentitywallets.exception.DuplicateCredential
 import org.eclipse.tractusx.managedidentitywallets.exception.ForbiddenException;
 import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
-import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistry;
-import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
-import org.eclipse.tractusx.ssi.lib.did.web.DidWebDocumentResolver;
-import org.eclipse.tractusx.ssi.lib.did.web.util.DidWebParser;
 import org.eclipse.tractusx.ssi.lib.model.did.DidDocument;
-import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.*;
-import org.eclipse.tractusx.ssi.lib.proof.LinkedDataProofValidation;
-import org.eclipse.tractusx.ssi.lib.proof.SignatureType;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialBuilder;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialSubject;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
@@ -65,7 +62,6 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.time.Instant;
 import java.util.*;
 
@@ -80,11 +76,6 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * The constant BASE_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN.
      */
     public static final String BASE_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN = "Base wallet BPN is not matching with request BPN(from token)";
-    /**
-     * The constant ISSUER_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN.
-     */
-    public static final String ISSUER_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN = "Issuer wallet BPN is not matching with request BPN(from token)";
-
     private final IssuersCredentialRepository issuersCredentialRepository;
     private final MIWSettings miwSettings;
 
@@ -476,51 +467,6 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
         return issuersCredential.getData();
     }
 
-    /**
-     * Credentials validation map.
-     *
-     * @param data                     the data
-     * @param withCredentialExpiryDate the with credential expiry date
-     * @param withRevocation           the with revocation
-     * @return the map
-     */
-    public Map<String, Object> credentialsValidation(Map<String, Object> data, boolean withCredentialExpiryDate, boolean withRevocation) {
-        VerifiableCredential verifiableCredential = new VerifiableCredential(data);
-        // DID Resolver Constracture params
-        DidDocumentResolverRegistry didDocumentResolverRegistry = new DidDocumentResolverRegistryImpl();
-        didDocumentResolverRegistry.register(
-                new DidWebDocumentResolver(HttpClient.newHttpClient(), new DidWebParser(), miwSettings.enforceHttps()));
-
-        String proofTye = verifiableCredential.getProof().get(StringPool.TYPE).toString();
-        LinkedDataProofValidation proofValidation;
-        if (SignatureType.ED21559.toString().equals(proofTye)) {
-            proofValidation = LinkedDataProofValidation.newInstance(
-                    SignatureType.ED21559,
-                    didDocumentResolverRegistry);
-        } else if (SignatureType.JWS.toString().equals(proofTye)) {
-            proofValidation = LinkedDataProofValidation.newInstance(
-                    SignatureType.JWS,
-                    didDocumentResolverRegistry);
-        } else {
-            throw new BadDataException(String.format("Invalid proof type: %s", proofTye));
-        }
-
-        boolean valid = proofValidation.verifiyProof(verifiableCredential);
-
-        Map<String, Object> response = new TreeMap<>();
-
-        //check expiry
-        boolean dateValidation = CommonService.validateExpiry(withCredentialExpiryDate, verifiableCredential, response);
-
-        //check revocation
-        boolean isRevoked = commonService.validateRevocation(withRevocation, verifiableCredential, response);
-
-        response.put(StringPool.VALID, valid && dateValidation && !isRevoked);
-        response.put("vc", verifiableCredential);
-
-        return response;
-    }
-
 
     private void validateAccess(String callerBpn, Wallet issuerWallet) {
         //validate BPN access, VC must be issued by base wallet
@@ -638,22 +584,5 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
         filterRequest.appendCriteria(StringPool.TYPE, Operator.EQUALS, MIWVerifiableCredentialType.SUMMARY_CREDENTIAL);
 
         return filter(filterRequest);
-    }
-
-    /**
-     * Credentials revoke.
-     *
-     * @param data      the data
-     * @param callerBPN the caller bpn
-     */
-    public void credentialsRevoke(Map<String, Object> data, String callerBPN) {
-        VerifiableCredential verifiableCredential = new VerifiableCredential(data);
-        Validate.isNull(verifiableCredential.getVerifiableCredentialStatus()).launch(new BadDataException("Credential Status is not exists"));
-        Wallet issuerWallet = commonService.getWalletByIdentifier(verifiableCredential.getIssuer().toString());
-
-        //validate BPN access, Issuer must be caller of API
-        Validate.isFalse(callerBPN.equals(issuerWallet.getBpn())).launch(new ForbiddenException(ISSUER_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN));
-        revocationService.revokeCredential((VerifiableCredentialStatusList2021Entry) verifiableCredential.getVerifiableCredentialStatus());
-        log.debug("VC revoked with id ->{}", StringEscapeUtils.escapeJava(String.valueOf(verifiableCredential.getId())));
     }
 }
