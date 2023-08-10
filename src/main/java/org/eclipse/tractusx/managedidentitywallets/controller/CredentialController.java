@@ -279,43 +279,76 @@ public class CredentialController extends BaseController {
     @Tag(name = API_TAG_VERIFIABLE_CREDENTIAL_REVOKE)
     @Operation(summary = "Revoke Verifiable Credentials", description = "Permission: **update_wallets** OR **update_wallet** (The BPN of the issuer of the Verifiable Credential must equal BPN of caller) \n\n Revoke Verifiable Credentials")
     @PostMapping(path = RestURI.CREDENTIALS_REVOKE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiResponse(responseCode = "401", description = "The request could not be completed due to a failed authorization.", content = {@Content(examples = {})})
+    @ApiResponse(responseCode = "403", description = "The request could not be completed due to a forbidden access", content = {@Content(examples = {})})
+    @ApiResponse(responseCode = "500", description = "Any other internal server error", content = {@Content(examples = {
+            @ExampleObject(name = "Internal server error", value = """
+                    {
+                      "type": "about:blank",
+                      "title": "Error Title",
+                      "status": 500,
+                      "detail": "Error Details",
+                      "instance": "API endpoint",
+                      "properties": {
+                        "timestamp": 1689762476720
+                      }
+                    }
+                    """)
+    })})
+    @ApiResponse(responseCode = "404", description = "Wallet not found with caller BPN", content = {@Content(examples = {
+            @ExampleObject(name = "Wallet not found with caller BPN", value = """
+                    {
+                        "type": "about:blank",
+                        "title": "Wallet not found for identifier did:web:localhost:BPNL0000000",
+                        "status": 404,
+                        "detail": "Wallet not found for identifier did:web:localhost:BPNL0000000",
+                        "instance": "/api/wallets/did%3Aweb%3Alocalhost%3ABPNL0000000/credentials",
+                        "properties": {
+                          "timestamp": 1689765541959
+                        }
+                      }
+                    """)
+    })})
+    @ApiResponse(responseCode = "200", description = "Credential revoked", content = {@Content(examples = {})})
     @io.swagger.v3.oas.annotations.parameters.RequestBody(content = {
             @Content(examples = @ExampleObject("""
                                 {
-                                    "@context": [
-                                      "https://www.w3.org/2018/credentials/v1",
-                                      "https://w3id.org/security/suites/jws-2020/v1",
-                                      "https://w3id.org/vc/status-list/2021/v1"
-                                    ],
-                                    "id": "did:web:localhost:BPNL000000000000#983376f8-15bf-47f6-8b43-26e8f63a97f2",
-                                    "type": [
-                                      "VerifiableCredential",
-                                      "BankAccountCredential"
-                                    ],
-                                    "credentialSubject": [
-                                      {
-                                        "name": "Sample Bank",
-                                        "accountNumber": "4567231458"
-                                      }
-                                    ],
-                                    "issuer": "did:web:localhost:BPNL000000000000",
-                                    "issuanceDate": "2023-08-03T06:25:08Z",
-                                    "expirationDate": "2019-06-17T18:56:59Z",
-                                    "credentialStatus": {
-                                      "type": "StatusList2021Entry",
-                                      "id": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation#1",
-                                      "statusPurpose": "revocation",
-                                      "statusListIndex": "1",
-                                      "statusListCredential": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation"
-                                    },
-                                    "proof": {
-                                      "proofPurpose": "proofPurpose",
-                                      "verificationMethod": "did:web:localhost:BPNL000000000000#",
-                                      "type": "JsonWebSignature2020",
-                                      "created": "2023-08-03T06:25:11Z",
-                                      "jws": "eyJhbGciOiJFZERTQSJ9..Zbrle0VMVc2u0BZiI5C5lPo2yIIm4BrhgwzZwS2DFGaCG7rIm1R4LBHSg6kRdp_1x23uVajUv-j5a-PSLoSQCA"
-                                    },
+                                  "@context": [
+                                    "https://www.w3.org/2018/credentials/v1",
+                                    "https://catenax-ng.github.io/product-core-schemas/businessPartnerData.json",
+                                    "https://w3id.org/security/suites/jws-2020/v1",
+                                    "https://w3id.org/vc/status-list/2021/v1"
+                                  ],
+                                  "id": "did:web:localhost:BPNL000000000000#13fead34-93c0-4d7e-8ddb-9dbb7756b72e",
+                                  "type": [
+                                    "VerifiableCredential",
+                                    "BpnCredential"
+                                  ],
+                                  "issuer": "did:web:localhost:BPNL000000000000",
+                                  "issuanceDate": "2023-08-08T06:48:20Z",
+                                  "expirationDate": "2024-12-31T18:30:00Z",
+                                  "credentialStatus": {
+                                    "type": "StatusList2021Entry",
+                                    "id": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation#5",
+                                    "statusPurpose": "revocation",
+                                    "statusListIndex": "5",
+                                    "statusListCredential": "http://localhost:8085/api/v1/revocations/credentials/did:web:localhost:BPNL000000000000-revocation"
+                                  },
+                                  "credentialSubject": [
+                                    {
+                                      "bpn": "BPNL000000000000",
+                                      "id": "did:web:localhost:BPNL000000000000",
+                                      "type": "BpnCredential"
+                                    }
+                                  ],
+                                  "proof": {
+                                    "proofPurpose": "proofPurpose",
+                                    "verificationMethod": "did:web:localhost:BPNL000000000000#",
+                                    "type": "JsonWebSignature2020",
+                                    "created": "2023-08-08T06:48:25Z",
+                                    "jws": "eyJhbGciOiJFZERTQSJ9..jQQ6tVD5vl11dc_fqTkLkBOzLugQsCQyyaH4S8dE1fgGS19BgXytm6PMs1gyXpyD2RopQISvY2P345rgXpgNCA"
                                   }
+                                }
                     """))
     })
     public ResponseEntity<Void> credentialsRevoke(@RequestBody Map<String, Object> data, Principal principal) {
