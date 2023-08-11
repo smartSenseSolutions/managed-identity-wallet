@@ -45,7 +45,6 @@ import org.eclipse.tractusx.managedidentitywallets.dto.IssueMembershipCredential
 import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
 import org.eclipse.tractusx.managedidentitywallets.exception.DuplicateCredentialProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.ForbiddenException;
-import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
 import org.eclipse.tractusx.ssi.lib.model.did.DidDocument;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
@@ -87,9 +86,6 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
 
     private final CommonService commonService;
 
-    private final RevocationService revocationService;
-
-
     /**
      * Instantiates a new Issuers credential service.
      *
@@ -99,18 +95,16 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
      * @param walletKeyService            the wallet key service
      * @param holdersCredentialRepository the holders credential repository
      * @param commonService               the common service
-     * @param revocationService           the revocation service
      */
     public IssuersCredentialService(IssuersCredentialRepository issuersCredentialRepository, MIWSettings miwSettings,
                                     SpecificationUtil<IssuersCredential> credentialSpecificationUtil,
-                                    WalletKeyService walletKeyService, HoldersCredentialRepository holdersCredentialRepository, CommonService commonService, RevocationService revocationService) {
+                                    WalletKeyService walletKeyService, HoldersCredentialRepository holdersCredentialRepository, CommonService commonService) {
         this.issuersCredentialRepository = issuersCredentialRepository;
         this.miwSettings = miwSettings;
         this.credentialSpecificationUtil = credentialSpecificationUtil;
         this.walletKeyService = walletKeyService;
         this.holdersCredentialRepository = holdersCredentialRepository;
         this.commonService = commonService;
-        this.revocationService = revocationService;
     }
 
 

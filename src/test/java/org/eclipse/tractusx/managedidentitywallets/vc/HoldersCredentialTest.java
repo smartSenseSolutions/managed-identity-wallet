@@ -23,8 +23,6 @@ package org.eclipse.tractusx.managedidentitywallets.vc;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import com.teketik.test.mockinbean.MockInBean;
 import org.eclipse.tractusx.managedidentitywallets.ManagedIdentityWalletsApplication;
 import org.eclipse.tractusx.managedidentitywallets.config.MIWSettings;
@@ -456,7 +454,7 @@ class HoldersCredentialTest {
             Mockito.when(revocationClient.verify(Mockito.any(StatusVerificationRequest.class))).thenReturn(statusVerificationResponse);
 
             Assertions.assertDoesNotThrow(() -> {
-                credentialService.credentialsRevoke(map,  bpn);
+                credentialService.revokeCredential(map, bpn);
             });
 
 
@@ -500,7 +498,7 @@ class HoldersCredentialTest {
 
             Assertions.assertThrows(CredentialValidationProblem.class, () -> {
                 try {
-                    credentialService.credentialsRevoke(map,  bpn);
+                    credentialService.revokeCredential(map, bpn);
                 } catch (CredentialValidationProblem credentialValidationProblem) {
                     List<Map<String, Object>> validationResults = credentialValidationProblem.getValidationResults();
                     Assertions.assertFalse(Boolean.parseBoolean(validationResults.get(0).get(StringPool.VALID).toString()));

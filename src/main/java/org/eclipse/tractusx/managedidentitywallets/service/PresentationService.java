@@ -23,18 +23,13 @@ package org.eclipse.tractusx.managedidentitywallets.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jwt.SignedJWT;
-import com.smartsensesolutions.java.commons.base.repository.BaseRepository;
-import com.smartsensesolutions.java.commons.base.service.BaseService;
-import com.smartsensesolutions.java.commons.specification.SpecificationUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.tractusx.managedidentitywallets.config.MIWSettings;
 import org.eclipse.tractusx.managedidentitywallets.constant.StringPool;
-import org.eclipse.tractusx.managedidentitywallets.dao.entity.HoldersCredential;
 import org.eclipse.tractusx.managedidentitywallets.dao.entity.Wallet;
-import org.eclipse.tractusx.managedidentitywallets.dao.repository.HoldersCredentialRepository;
 import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
 import org.eclipse.tractusx.managedidentitywallets.exception.CredentialValidationProblem;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
@@ -72,11 +67,7 @@ import java.util.*;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class PresentationService extends BaseService<HoldersCredential, Long> {
-
-    private final HoldersCredentialRepository holdersCredentialRepository;
-
-    private final SpecificationUtil<HoldersCredential> credentialSpecificationUtil;
+public class PresentationService {
 
     private final CommonService commonService;
 
@@ -88,15 +79,6 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
 
     private final CredentialService credentialService;
 
-    @Override
-    protected BaseRepository<HoldersCredential, Long> getRepository() {
-        return holdersCredentialRepository;
-    }
-
-    @Override
-    protected SpecificationUtil<HoldersCredential> getSpecificationUtil() {
-        return credentialSpecificationUtil;
-    }
 
     /**
      * Create presentation map.
@@ -112,7 +94,7 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
     @SneakyThrows({InvalidePrivateKeyFormat.class})
     public Map<String, Object> createPresentation(Map<String, Object> data, boolean withCredentialExpiryDate, boolean withCredentialRevocation, boolean asJwt, String audience, String callerBpn) {
         List<Map<String, Object>> verifiableCredentialList = (List<Map<String, Object>>) data.get(StringPool.VERIFIABLE_CREDENTIALS);
-        
+
         //check if holder wallet is in the system
         Wallet callerWallet = commonService.getWalletByIdentifier(callerBpn);
 
@@ -190,6 +172,8 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
             JsonLdSerializerImpl jsonLdSerializer = new JsonLdSerializerImpl();
             VerifiablePresentation presentation = jsonLdSerializer.deserializePresentation(new SerializedVerifiablePresentation(vpClaim));
             List<VerifiableCredential> verifiableCredentials = presentation.getVerifiableCredentials();
+
+            //validate VC
             validateCredentials(withCredentialExpiryDate, withCredentialRevocation, verifiableCredentials);
 
             //validate JWT sig.
@@ -272,9 +256,7 @@ public class PresentationService extends BaseService<HoldersCredential, Long> {
         });
 
         //check valid status of each VC, throw error if any one is invalid with details
-        validationResults.forEach(result -> {
-            Validate.isFalse(Boolean.parseBoolean(result.get(StringPool.VALID).toString())).launch(new CredentialValidationProblem(validationResults, "One or more VCs are invalid"));
-        });
+        validationResults.forEach(result -> Validate.isFalse(Boolean.parseBoolean(result.get(StringPool.VALID).toString())).launch(new CredentialValidationProblem(validationResults, "One or more VCs are invalid")));
     }
 
 }

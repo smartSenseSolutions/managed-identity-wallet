@@ -113,7 +113,7 @@ public class CredentialService {
      * @param data      the data
      * @param callerBPN the caller bpn
      */
-    public void credentialsRevoke(Map<String, Object> data, String callerBPN) {
+    public void revokeCredential(Map<String, Object> data, String callerBPN) {
         VerifiableCredential verifiableCredential = new VerifiableCredential(data);
         Validate.isNull(verifiableCredential.getVerifiableCredentialStatus()).launch(new BadDataException("Credential Status is not exists"));
         Wallet issuerWallet = commonService.getWalletByIdentifier(verifiableCredential.getIssuer().toString());
@@ -127,7 +127,7 @@ public class CredentialService {
             map.put(StringPool.VC_ID, verifiableCredential.getId().toString());
             map.remove(StringPool.VC);
             validationResults.add(map);
-            Validate.isFalse(Boolean.parseBoolean(map.get(StringPool.VALID).toString())).launch(new CredentialValidationProblem(validationResults, "VC is invalid"));
+            throw new CredentialValidationProblem(validationResults, "VC is invalid");
         }
         revocationService.revokeCredential((VerifiableCredentialStatusList2021Entry) verifiableCredential.getVerifiableCredentialStatus());
         log.debug("VC revoked with id ->{}", StringEscapeUtils.escapeJava(String.valueOf(verifiableCredential.getId())));

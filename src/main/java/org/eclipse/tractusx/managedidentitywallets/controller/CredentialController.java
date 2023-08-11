@@ -426,7 +426,7 @@ public class CredentialController extends BaseController {
                     """))
     })
     public ResponseEntity<Void> credentialsRevoke(@RequestBody Map<String, Object> data, Principal principal) {
-        credentialService.credentialsRevoke(data, getBPNFromToken(principal));
+        credentialService.revokeCredential(data, getBPNFromToken(principal));
         return ResponseEntity.status(HttpStatus.OK).build();
     }
 }
