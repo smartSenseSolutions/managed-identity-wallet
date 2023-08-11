@@ -120,7 +120,7 @@ public class CredentialService {
 
         //validate BPN access, Issuer must be caller of API
         Validate.isFalse(callerBPN.equals(issuerWallet.getBpn())).launch(new ForbiddenException(ISSUER_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN));
-        Map<String, Object> map = credentialsValidation(verifiableCredential, true, true);
+        Map<String, Object> map = credentialsValidation(verifiableCredential, false, true);
         // validate vc
         if (!Boolean.parseBoolean(map.get(StringPool.VALID).toString())) {
             List<Map<String, Object>> validationResults = new ArrayList<>();
