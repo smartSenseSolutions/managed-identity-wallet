@@ -292,6 +292,9 @@ class PresentationTest {
                         if (string.equals(invalidVcId)) {
                             Assertions.assertFalse(Boolean.parseBoolean(data.get(StringPool.VALID).toString()));
                             Assertions.assertFalse(Boolean.parseBoolean(data.get(StringPool.VALIDATE_EXPIRY_DATE).toString()));
+                        }else{
+                            Assertions.assertTrue(Boolean.parseBoolean(data.get(StringPool.VALID).toString()));
+                            Assertions.assertTrue(Boolean.parseBoolean(data.get(StringPool.VALIDATE_EXPIRY_DATE).toString()));
                         }
                     });
                     throw credentialValidationProblem;

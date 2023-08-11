@@ -28,6 +28,7 @@ import org.eclipse.tractusx.managedidentitywallets.config.MIWSettings;
 import org.eclipse.tractusx.managedidentitywallets.constant.StringPool;
 import org.eclipse.tractusx.managedidentitywallets.dao.entity.Wallet;
 import org.eclipse.tractusx.managedidentitywallets.exception.BadDataException;
+import org.eclipse.tractusx.managedidentitywallets.exception.CredentialValidationProblem;
 import org.eclipse.tractusx.managedidentitywallets.exception.ForbiddenException;
 import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
@@ -42,6 +43,8 @@ import org.eclipse.tractusx.ssi.lib.proof.SignatureType;
 import org.springframework.stereotype.Service;
 
 import java.net.http.HttpClient;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -117,6 +120,15 @@ public class CredentialService {
 
         //validate BPN access, Issuer must be caller of API
         Validate.isFalse(callerBPN.equals(issuerWallet.getBpn())).launch(new ForbiddenException(ISSUER_WALLET_BPN_IS_NOT_MATCHING_WITH_REQUEST_BPN_FROM_TOKEN));
+        Map<String, Object> map = credentialsValidation(verifiableCredential, true, true);
+        // validate vc
+        if (!Boolean.parseBoolean(map.get(StringPool.VALID).toString())) {
+            List<Map<String, Object>> validationResults = new ArrayList<>();
+            map.put(StringPool.VC_ID, verifiableCredential.getId().toString());
+            map.remove(StringPool.VC);
+            validationResults.add(map);
+            Validate.isFalse(Boolean.parseBoolean(map.get(StringPool.VALID).toString())).launch(new CredentialValidationProblem(validationResults, "VC is invalid"));
+        }
         revocationService.revokeCredential((VerifiableCredentialStatusList2021Entry) verifiableCredential.getVerifiableCredentialStatus());
         log.debug("VC revoked with id ->{}", StringEscapeUtils.escapeJava(String.valueOf(verifiableCredential.getId())));
     }

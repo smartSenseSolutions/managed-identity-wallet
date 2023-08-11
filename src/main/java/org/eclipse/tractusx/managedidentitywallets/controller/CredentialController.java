@@ -279,6 +279,111 @@ public class CredentialController extends BaseController {
     @Tag(name = API_TAG_VERIFIABLE_CREDENTIAL_REVOKE)
     @Operation(summary = "Revoke Verifiable Credentials", description = "Permission: **update_wallets** OR **update_wallet** (The BPN of the issuer of the Verifiable Credential must equal BPN of caller) \n\n Revoke Verifiable Credentials")
     @PostMapping(path = RestURI.CREDENTIALS_REVOKE, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @ApiResponse(responseCode = "401", description = "The request could not be completed due to a failed authorization.", content = {@Content(examples = {})})
+    @ApiResponse(responseCode = "403", description = "The request could not be completed due to a forbidden access", content = {@Content(examples = {})})
+    @ApiResponse(responseCode = "500", description = "Any other internal server error", content = {@Content(examples = {
+            @ExampleObject(name = "Internal server error", value = """
+                    {
+                      "type": "about:blank",
+                      "title": "Error Title",
+                      "status": 500,
+                      "detail": "Error Details",
+                      "instance": "API endpoint",
+                      "properties": {
+                        "timestamp": 1689762476720
+                      }
+                    }
+                    """)
+    })})
+    @ApiResponse(responseCode = "404", description = "Wallet not found with caller BPN", content = {@Content(examples = {
+            @ExampleObject(name = "Wallet not found with caller BPN", value = """
+                    {
+                        "type": "about:blank",
+                        "title": "Wallet not found for identifier did:web:localhost:BPNL0000000",
+                        "status": 404,
+                        "detail": "Wallet not found for identifier did:web:localhost:BPNL0000000",
+                        "instance": "/api/wallets/did%3Aweb%3Alocalhost%3ABPNL0000000/credentials",
+                        "properties": {
+                          "timestamp": 1689765541959
+                        }
+                      }
+                    """)
+    })})
+    @ApiResponse(responseCode = "400", description = "Credential Status is not exists", content = {@Content(examples = {
+            @ExampleObject(name = "Credential Status is not exists", value = """
+                    {
+                      "type": "about:blank",
+                      "title": "Credential Status is not exists",
+                      "status": 400,
+                      "detail": "Credential Status is not exists",
+                      "instance": "/api/credentials/revoke",
+                      "properties": {
+                        "timestamp": 1691667139395
+                      }
+                    }
+                    """),
+            @ExampleObject(name = "Credential is already revoked", value = """
+                    {
+                      "type": "about:blank",
+                      "title": "VC is invalid",
+                      "status": 400,
+                      "detail": "VC is invalid",
+                      "instance": "/api/credentials/revoke",
+                      "properties": {
+                        "timestamp": 1691668509808,
+                        "validationResults": [
+                          {
+                            "revoked": true,
+                            "valid": false,
+                            "validateExpiryDate": true,
+                            "vcId": "did:web:localhost:BPNL000000000000#f4c8b44a-95fc-4978-a85f-867630d82ffd"
+                          }
+                        ]
+                      }
+                    }
+                    """),
+            @ExampleObject(name = "Credential signature invalid", value = """
+                    {
+                      "type": "about:blank",
+                      "title": "VC is invalid",
+                      "status": 400,
+                      "detail": "VC is invalid",
+                      "instance": "/api/credentials/revoke",
+                      "properties": {
+                        "timestamp": 1691668509808,
+                        "validationResults": [
+                          {
+                            "revoked": false,
+                            "valid": false,
+                            "validateExpiryDate": true,
+                            "vcId": "did:web:localhost:BPNL000000000000#f4c8b44a-95fc-4978-a85f-867630d82ffd"
+                          }
+                        ]
+                      }
+                    }
+                    """),
+            @ExampleObject(name = "Credential is expired", value = """
+                    {
+                      "type": "about:blank",
+                      "title": "VC is invalid",
+                      "status": 400,
+                      "detail": "VC is invalid",
+                      "instance": "/api/credentials/revoke",
+                      "properties": {
+                        "timestamp": 1691668584169,
+                        "validationResults": [
+                          {
+                            "revoked": false,
+                            "valid": false,
+                            "validateExpiryDate": false,
+                            "vcId": "did:web:localhost:BPNL000000000000#b06725e5-c811-40c6-a711-8b2c2cd39bda"
+                          }
+                        ]
+                      }
+                    }
+                    """)
+    })})
+    @ApiResponse(responseCode = "200", description = "Credential revoked", content = {@Content(examples = {})})
     @io.swagger.v3.oas.annotations.parameters.RequestBody(content = {
             @Content(examples = @ExampleObject("""
                                 {

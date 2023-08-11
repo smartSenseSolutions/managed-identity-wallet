@@ -79,6 +79,48 @@ public class PresentationController extends BaseController {
                     }
                     """)
     })})
+    @ApiResponse(responseCode = "400", description = "The input does not comply to the syntax requirements", content = {@Content(examples = {
+            @ExampleObject(name = "Validation of VC failed in case of revoke", value = """
+                    {
+                      "type": "about:blank",
+                      "title": "One or more VCs are invalid",
+                      "status": 400,
+                      "detail": "One or more VCs are invalid",
+                      "instance": "/api/presentations",
+                      "properties": {
+                        "timestamp": 1691658092282,
+                        "validationResults": [
+                          {
+                            "revoked": true,
+                            "valid": false,
+                            "validateExpiryDate": true,
+                            "vcId": "did:web:localhost:BPNL000000000000#646d7b0f-749b-40e3-88d9-78560b10c14d"
+                          }
+                        ]
+                      }
+                    }
+                    """),
+            @ExampleObject(name = "Validation of VC failed in case of expired", value = """
+                    {
+                      "type": "about:blank",
+                      "title": "One or more VCs are invalid",
+                      "status": 400,
+                      "detail": "One or more VCs are invalid",
+                      "instance": "/api/presentations",
+                      "properties": {
+                        "timestamp": 1691658670960,
+                        "validationResults": [
+                          {
+                            "revoked": false,
+                            "valid": false,
+                            "validateExpiryDate": false,
+                            "vcId": "did:web:localhost:BPNL000000000000#646d7b0f-749b-40e3-88d9-78560b10c14d"
+                          }
+                        ]
+                      }
+                    }
+                    """)
+    })})
     @ApiResponse(responseCode = "404", description = "Wallet not found with provided identifier", content = {@Content(examples = {
             @ExampleObject(name = "Wallet not found with provided identifier", value = """
                     {
@@ -250,6 +292,47 @@ public class PresentationController extends BaseController {
                                  "filed": "filed error message"
                              }
                          }
+                     }
+                    """),
+            @ExampleObject(name = "Response in case of vc is revoked", value = """
+                     {
+                       "type": "about:blank",
+                       "title": "One or more VCs are invalid",
+                       "status": 400,
+                       "detail": "One or more VCs are invalid",
+                       "instance": "/api/presentations/validation",
+                       "properties": {
+                         "timestamp": 1691658881928,
+                         "validationResults": [
+                           {
+                             "revoked": true,
+                             "valid": false,
+                             "validateExpiryDate": true,
+                             "vcId": "did:web:localhost:BPNL000000000000#646d7b0f-749b-40e3-88d9-78560b10c14d"
+                           }
+                         ]
+                       }
+                     }
+                    """)
+            ,
+            @ExampleObject(name = "Response in case of vc is expired", value = """
+                     {
+                       "type": "about:blank",
+                       "title": "One or more VCs are invalid",
+                       "status": 400,
+                       "detail": "One or more VCs are invalid",
+                       "instance": "/api/presentations/validation",
+                       "properties": {
+                         "timestamp": 1691658881928,
+                         "validationResults": [
+                           {
+                             "revoked": false,
+                             "valid": false,
+                             "validateExpiryDate": false,
+                             "vcId": "did:web:localhost:BPNL000000000000#646d7b0f-749b-40e3-88d9-78560b10c14d"
+                           }
+                         ]
+                       }
                      }
                     """)
     })})
