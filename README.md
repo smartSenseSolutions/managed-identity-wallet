@@ -76,7 +76,7 @@ The available scopes/roles are:
 6. Role `manage_app` used to change the log level of the application at runtime. Check Logging in the application
    section for more details
 
-Overview by Endpoint
+## Overview by Endpoint
 
 | Artefact                                  | CRUD   | HTTP Verb/ Request | Endpoint                              | Roles                                          | Constraints                                                |
 |-------------------------------------------|--------|--------------------|---------------------------------------|------------------------------------------------|------------------------------------------------------------|
