@@ -66,6 +66,18 @@ public class PresentationController extends BaseController {
     @ApiResponse(responseCode = "401", description = "The request could not be completed due to a failed authorization.", content = {@Content(examples = {})})
     @ApiResponse(responseCode = "403", description = "The request could not be completed due to a forbidden access", content = {@Content(examples = {})})
     @ApiResponse(responseCode = "500", description = "Any other internal server error", content = {@Content(examples = {
+            @ExampleObject(name = "LOADING_REMOTE_CONTEXT_FAILED", value = """
+                    {
+                        "type": "about:blank",
+                        "title": "java.lang.RuntimeException: JsonLdError[code=There was a problem encountered loading a remote context [code=LOADING_REMOTE_CONTEXT_FAILED]., message=There was a problem encountered loading a remote context [code=LOADING_REMOTE_CONTEXT_FAILED].]",
+                        "status": 500,
+                        "detail": "java.lang.RuntimeException: JsonLdError[code=There was a problem encountered loading a remote context [code=LOADING_REMOTE_CONTEXT_FAILED]., message=There was a problem encountered loading a remote context [code=LOADING_REMOTE_CONTEXT_FAILED].]",
+                        "instance": "/api/presentations",
+                        "properties": {
+                            "timestamp": 1692162027597
+                        }
+                    }
+                    """),
             @ExampleObject(name = "Internal server error", value = """
                     {
                       "type": "about:blank",
@@ -251,6 +263,42 @@ public class PresentationController extends BaseController {
     @ApiResponse(responseCode = "401", description = "The request could not be completed due to a failed authorization.", content = {@Content(examples = {})})
     @ApiResponse(responseCode = "403", description = "The request could not be completed due to a forbidden access", content = {@Content(examples = {})})
     @ApiResponse(responseCode = "500", description = "Any other internal server error", content = {@Content(examples = {
+            @ExampleObject(name = "LOADING_REMOTE_CONTEXT_FAILED", value = """
+                    {
+                        "type": "about:blank",
+                        "title": "java.lang.RuntimeException: JsonLdError[code=There was a problem encountered loading a remote context [code=LOADING_REMOTE_CONTEXT_FAILED]., message=There was a problem encountered loading a remote context [code=LOADING_REMOTE_CONTEXT_FAILED].]",
+                        "status": 500,
+                        "detail": "java.lang.RuntimeException: JsonLdError[code=There was a problem encountered loading a remote context [code=LOADING_REMOTE_CONTEXT_FAILED]., message=There was a problem encountered loading a remote context [code=LOADING_REMOTE_CONTEXT_FAILED].]",
+                        "instance": "/api/presentations/validation",
+                        "properties": {
+                            "timestamp": 1692164930439
+                        }
+                    }
+                    """),
+            @ExampleObject(name = "Json LD validation failed", value = """
+                    {
+                        "type": "about:blank",
+                        "title": "Json LD validation failed for json: {}",
+                        "status": 500,
+                        "detail": "Json LD validation failed for json: {}",
+                        "instance": "/api/presentations/validation",
+                        "properties": {
+                            "timestamp": 1692164686996
+                        }
+                    }
+                    """),
+            @ExampleObject(name = "Undefined JSON-LD term", value = """
+                    {
+                        "type": "about:blank",
+                        "title": "Undefined JSON-LD term: contractTemplate",
+                        "status": 500,
+                        "detail": "Undefined JSON-LD term: contractTemplate",
+                        "instance": "/api/presentations/validation",
+                        "properties": {
+                            "timestamp": 1692164787428
+                        }
+                    }
+                    """),
             @ExampleObject(name = "Internal server error", value = """
                     {
                       "type": "about:blank",
