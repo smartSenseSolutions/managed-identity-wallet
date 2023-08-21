@@ -58,16 +58,18 @@ import java.util.*;
  */
 public class TestUtils {
 
+
     /**
      * Create wallet response entity.
      *
      * @param bpn          the bpn
      * @param name         the name
      * @param testTemplate the test template
+     * @param baseBPN      the base bpn
      * @return the response entity
      */
-    public static ResponseEntity<String> createWallet(String bpn, String name, TestRestTemplate testTemplate) {
-        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(bpn);
+    public static ResponseEntity<String> createWallet(String bpn, String name, TestRestTemplate testTemplate, String baseBPN) {
+        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(baseBPN);
 
         CreateWalletRequest request = CreateWalletRequest.builder().bpn(bpn).name(name).build();
 

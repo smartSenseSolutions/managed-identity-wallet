@@ -49,8 +49,9 @@ import org.eclipse.tractusx.managedidentitywallets.revocation.service.Revocation
 import org.eclipse.tractusx.managedidentitywallets.service.CredentialService;
 import org.eclipse.tractusx.managedidentitywallets.utils.AuthenticationUtils;
 import org.eclipse.tractusx.managedidentitywallets.utils.TestUtils;
-import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
+import org.eclipse.tractusx.ssi.lib.did.resolver.DidResolver;
 import org.eclipse.tractusx.ssi.lib.did.web.DidWebFactory;
+import org.eclipse.tractusx.ssi.lib.did.web.DidWebResolver;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.*;
 import org.eclipse.tractusx.ssi.lib.proof.LinkedDataProofValidation;
 import org.eclipse.tractusx.ssi.lib.proof.SignatureType;
@@ -237,9 +238,9 @@ class HoldersCredentialTest {
             //mock setup
             LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
             utils.when(() -> {
-                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidResolver.class));
             }).thenReturn(mock);
-            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(false);
+            Mockito.when(mock.verifyProof(Mockito.any(VerifiableCredential.class))).thenReturn(false);
 
             Map<String, Object> stringObjectMap = credentialController.credentialsValidation(credential, false, false).getBody();
             Assertions.assertFalse(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
@@ -260,9 +261,9 @@ class HoldersCredentialTest {
             //mock setup
             LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
             utils.when(() -> {
-                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidResolver.class));
             }).thenReturn(mock);
-            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+            Mockito.when(mock.verifyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
 
             Map<String, Object> stringObjectMap = credentialController.credentialsValidation(credential, true, false).getBody();
             Assertions.assertTrue(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
@@ -292,12 +293,13 @@ class HoldersCredentialTest {
 
             //mock setup
             LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
+            DidResolver resolver = Mockito.mock(DidWebResolver.class);
             utils.when(() -> {
-                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidWebResolver.class));
             }).thenReturn(mock);
 
             //mock signature check
-            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+            Mockito.when(mock.verifyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
 
             //mock evocation client, return revoked = true
             Mockito.reset(revocationClient);
@@ -336,10 +338,12 @@ class HoldersCredentialTest {
         try (MockedStatic<LinkedDataProofValidation> utils = Mockito.mockStatic(LinkedDataProofValidation.class)) {
             //mock setup
             LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
+            DidResolver resolver = Mockito.mock(DidWebResolver.class);
+
             utils.when(() -> {
-                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidWebResolver.class));
             }).thenReturn(mock);
-            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+            Mockito.when(mock.verifyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
             Assertions.assertThrows(BadDataException.class, () -> {
                 credentialController.credentialsValidation(credential, false, true);
             });
@@ -362,9 +366,9 @@ class HoldersCredentialTest {
             //mock setup
             LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
             utils.when(() -> {
-                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidResolver.class));
             }).thenReturn(mock);
-            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+            Mockito.when(mock.verifyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
 
             Map<String, Object> stringObjectMap = credentialController.credentialsValidation(credential, false, false).getBody();
             Assertions.assertTrue(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
@@ -388,9 +392,9 @@ class HoldersCredentialTest {
             //mock setup
             LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
             utils.when(() -> {
-                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidResolver.class));
             }).thenReturn(mock);
-            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+            Mockito.when(mock.verifyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
 
             Map<String, Object> stringObjectMap = credentialController.credentialsValidation(credential, true, false).getBody();
             Assertions.assertFalse(Boolean.parseBoolean(stringObjectMap.get(StringPool.VALID).toString()));
@@ -443,10 +447,12 @@ class HoldersCredentialTest {
             //mock VC verification
             //mock setup
             LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
+            DidResolver resolver = Mockito.mock(DidWebResolver.class);
+
             utils.when(() -> {
-                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidWebResolver.class));
             }).thenReturn(mock);
-            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
+            Mockito.when(mock.verifyProof(Mockito.any(VerifiableCredential.class))).thenReturn(true);
 
             StatusVerificationResponse statusVerificationResponse = new StatusVerificationResponse();
             statusVerificationResponse.setRevoked(false);
@@ -486,10 +492,12 @@ class HoldersCredentialTest {
             //mock VC verification
             //mock setup
             LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
+            DidResolver resolver = Mockito.mock(DidWebResolver.class);
+
             utils.when(() -> {
-                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+                LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidWebResolver.class));
             }).thenReturn(mock);
-            Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(false);
+            Mockito.when(mock.verifyProof(Mockito.any(VerifiableCredential.class))).thenReturn(false);
 
             StatusVerificationResponse statusVerificationResponse = new StatusVerificationResponse();
             statusVerificationResponse.setRevoked(false);
@@ -516,8 +524,8 @@ class HoldersCredentialTest {
 
     private VerifiableCredential issueVC() throws JsonProcessingException {
         String bpn = UUID.randomUUID().toString();
-        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(bpn);
-        TestUtils.createWallet(bpn, "Test", restTemplate);
+        String baseBpn = miwSettings.authorityWalletBpn();
+        TestUtils.createWallet(bpn, "Test", restTemplate, baseBpn);
         ResponseEntity<String> vc = TestUtils.issueMembershipVC(restTemplate, bpn, miwSettings.authorityWalletBpn());
         VerifiableCredential verifiableCredential = new VerifiableCredential(new ObjectMapper().readValue(vc.getBody(), Map.class));
         return verifiableCredential;
@@ -526,7 +534,7 @@ class HoldersCredentialTest {
 
     private ResponseEntity<String> issueVC(String bpn, String did, String type, HttpHeaders headers, boolean revocable, Map<String, Object> statusMap) throws JsonProcessingException {
         //save wallet
-        TestUtils.createWallet(bpn, did, restTemplate);
+        TestUtils.createWallet(bpn, did, restTemplate, miwSettings.authorityWalletBpn());
 
         // Create VC without proof
         //VC Bulider

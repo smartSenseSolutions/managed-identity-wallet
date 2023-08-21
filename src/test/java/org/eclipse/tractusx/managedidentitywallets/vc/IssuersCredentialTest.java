@@ -214,7 +214,7 @@ class IssuersCredentialTest {
         String issuerDid = miwSettings.authorityWalletDid();
 
         //save wallet
-        TestUtils.createWallet(bpn, did, restTemplate);
+        TestUtils.createWallet(bpn, did, restTemplate, miwSettings.authorityWalletBpn());
 
         // Create VC without proof
         //VC Bulider
@@ -293,9 +293,9 @@ class IssuersCredentialTest {
 
 
     private ResponseEntity<String> issueVC(String bpn, String holderDid, String issuerDid, String type, HttpHeaders headers) throws JsonProcessingException {
-
+        String baseBpn = miwSettings.authorityWalletBpn();
         //save wallet
-        TestUtils.createWallet(bpn, holderDid, restTemplate);
+        TestUtils.createWallet(bpn, holderDid, restTemplate, baseBpn);
 
         // Create VC without proof
         //VC Bulider

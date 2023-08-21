@@ -78,6 +78,8 @@ The available scopes/roles are:
 
 ## Overview by Endpoint
 
+Overview by Endpoint
+
 | Artefact                                  | CRUD   | HTTP Verb/ Request | Endpoint                              | Roles                                          | Constraints                                                |
 |-------------------------------------------|--------|--------------------|---------------------------------------|------------------------------------------------|------------------------------------------------------------|
 | **Wallets**                               | Read   | GET                | /api/wallets                          | **view_wallets**                               |                                                            |
@@ -88,7 +90,6 @@ The available scopes/roles are:
 | **Verifiable Presentations - Validation** | Create | POST               | /api/presentations/validation         | **view_wallets**OR<br />**view_wallet**        |                                                            |
 | **Verifiable Credential - Holder**        | Read   | GET                | /api/credentials                      | **view_wallets**OR<br />**view_wallet**        |                                                            |
 | **Verifiable Credential - Holder**        | Create | POST               | /api/credentials                      | **update_wallet**OR<br />**update_wallet**     |                                                            |
-| **Verifiable Credential - Holder**        | Delete | DELETE             | /api/credentials                      | **update_wallet**                              |                                                            |
 | **Verfiable Credential - Validation**     | Create | POST               | /api/credentials/validation           | **view_wallets**OR<br />**view_wallet**        |                                                            |
 | **Verfiable Credential - Issuer**         | Read   | GET                | /api/credentials/issuer               | **view_wallets**                               |                                                            |
 | **Verfiable Credential - Issuer**         | Create | POST               | /api/credentials/issuer               | **update_wallets**                             |                                                            |

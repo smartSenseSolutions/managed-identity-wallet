@@ -36,9 +36,8 @@ import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
 import org.eclipse.tractusx.ssi.lib.crypt.ed25519.Ed25519Key;
 import org.eclipse.tractusx.ssi.lib.crypt.octet.OctetKeyPairFactory;
 import org.eclipse.tractusx.ssi.lib.crypt.x21559.x21559PrivateKey;
-import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistry;
-import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
-import org.eclipse.tractusx.ssi.lib.did.web.DidWebDocumentResolver;
+import org.eclipse.tractusx.ssi.lib.did.resolver.DidResolver;
+import org.eclipse.tractusx.ssi.lib.did.web.DidWebResolver;
 import org.eclipse.tractusx.ssi.lib.did.web.util.DidWebParser;
 import org.eclipse.tractusx.ssi.lib.exception.InvalidePrivateKeyFormat;
 import org.eclipse.tractusx.ssi.lib.jwt.SignedJwtFactory;
@@ -203,11 +202,8 @@ public class PresentationService {
     private boolean validateSignature(SignedJWT signedJWT) {
         //validate jwt signature
         try {
-            DidDocumentResolverRegistry didDocumentResolverRegistry = new DidDocumentResolverRegistryImpl();
-            didDocumentResolverRegistry.register(
-                    new DidWebDocumentResolver(HttpClient.newHttpClient(), new DidWebParser(), miwSettings.enforceHttps()));
-
-            SignedJwtVerifier jwtVerifier = new SignedJwtVerifier(didDocumentResolverRegistry);
+            DidResolver resolver = new DidWebResolver(HttpClient.newHttpClient(), new DidWebParser(), miwSettings.enforceHttps());
+            SignedJwtVerifier jwtVerifier = new SignedJwtVerifier(resolver);
             return jwtVerifier.verify(signedJWT);
         } catch (Exception e) {
             log.error("Can not verify signature of jwt", e);
@@ -258,5 +254,4 @@ public class PresentationService {
         //check valid status of each VC, throw error if any one is invalid with details
         validationResults.forEach(result -> Validate.isFalse(Boolean.parseBoolean(result.get(StringPool.VALID).toString())).launch(new CredentialValidationProblem(validationResults, "One or more VCs are invalid")));
     }
-
 }

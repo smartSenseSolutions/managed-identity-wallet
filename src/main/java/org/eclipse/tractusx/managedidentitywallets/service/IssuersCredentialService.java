@@ -460,7 +460,7 @@ public class IssuersCredentialService extends BaseService<IssuersCredential, Lon
         // Return VC
         return issuersCredential.getData();
     }
-
+    
 
     private void validateAccess(String callerBpn, Wallet issuerWallet) {
         //validate BPN access, VC must be issued by base wallet

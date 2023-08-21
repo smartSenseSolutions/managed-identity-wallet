@@ -46,9 +46,9 @@ import org.eclipse.tractusx.managedidentitywallets.revocation.service.Revocation
 import org.eclipse.tractusx.managedidentitywallets.service.PresentationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.AuthenticationUtils;
 import org.eclipse.tractusx.managedidentitywallets.utils.TestUtils;
-import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistry;
-import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
+import org.eclipse.tractusx.ssi.lib.did.resolver.DidResolver;
 import org.eclipse.tractusx.ssi.lib.did.web.DidWebFactory;
+import org.eclipse.tractusx.ssi.lib.did.web.DidWebResolver;
 import org.eclipse.tractusx.ssi.lib.exception.DidDocumentResolverNotRegisteredException;
 import org.eclipse.tractusx.ssi.lib.exception.JwtException;
 import org.eclipse.tractusx.ssi.lib.jwt.SignedJwtVerifier;
@@ -130,8 +130,9 @@ class PresentationTest {
         Assertions.assertNotNull(presentation);
         Map<String, Object> vpResponse = presentation;
         try (MockedConstruction<SignedJwtVerifier> mocked = Mockito.mockConstruction(SignedJwtVerifier.class)) {
-            DidDocumentResolverRegistry didDocumentResolverRegistry = Mockito.mock(DidDocumentResolverRegistry.class);
-            SignedJwtVerifier signedJwtVerifier = new SignedJwtVerifier(didDocumentResolverRegistry);
+
+            DidResolver didResolver = Mockito.mock(DidWebResolver.class);
+            SignedJwtVerifier signedJwtVerifier = new SignedJwtVerifier(didResolver);
 
             Mockito.doThrow(new JwtException("invalid")).when(signedJwtVerifier).verify(Mockito.any(SignedJWT.class));
             log.info("Waiting for 62 sec.");
@@ -283,7 +284,7 @@ class PresentationTest {
     }
 
     private Map<String, Object> createVP(String bpn, String audience, boolean expiredVC) throws JsonProcessingException {
-        ResponseEntity<String> response = TestUtils.createWallet(bpn, bpn, restTemplate);
+        ResponseEntity<String> response = TestUtils.createWallet(bpn, bpn, restTemplate, miwSettings.authorityWalletBpn());
         Assertions.assertEquals(response.getStatusCode().value(), HttpStatus.CREATED.value());
         Wallet wallet = TestUtils.getWalletFromString(response.getBody());
 
@@ -316,7 +317,7 @@ class PresentationTest {
     @DisplayName("Create VP as JWT of expired and revoked VC with revocation status check = true and check vc expiry check = true, it should give error with status 400")
     void createPresentationAsJWTWithExpiredAndRevokedVC400() throws JsonProcessingException {
         String bpn = UUID.randomUUID().toString();
-        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate).getBody());
+        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate, miwSettings.authorityWalletBpn()).getBody());
         String audience = "audience";
 
         VerifiableCredential vc1 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
@@ -356,7 +357,7 @@ class PresentationTest {
     @DisplayName("Create VP as JWT of expired VC and valid VC with revocation status check = false and check vc expiry check = true, it should give error with status 400")
     void createPresentationAsJWTWithExpiredVC400() throws JsonProcessingException {
         String bpn = UUID.randomUUID().toString();
-        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate).getBody());
+        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate, miwSettings.authorityWalletBpn()).getBody());
         String audience = "audience";
 
         VerifiableCredential vc1 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
@@ -408,7 +409,7 @@ class PresentationTest {
     @DisplayName("Create VP as JWT of revoked VC with revocation status check = true and vc expiry check = false, it should give error with status 400")
     void createPresentationAsJWTWithRevokedVC400() throws JsonProcessingException {
         String bpn = UUID.randomUUID().toString();
-        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate).getBody());
+        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate, miwSettings.authorityWalletBpn()).getBody());
         String audience = "audience";
 
         VerifiableCredential vc1 = TestUtils.issueRandomVC(wallet.getDid(), miwSettings.authorityWalletDid(), miwSettings, objectMapper, revocationClient, restTemplate);
@@ -443,7 +444,7 @@ class PresentationTest {
     @DisplayName("Create VP as JWT from 5 valid VC and check VC expiry = true date and revocation status check = true. It should create VP with status 201")
     void createPresentationAsJWT201() throws JsonProcessingException, ParseException {
         String bpn = UUID.randomUUID().toString();
-        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate).getBody());
+        Wallet wallet = TestUtils.getWalletFromString(TestUtils.createWallet(bpn, bpn, restTemplate, miwSettings.authorityWalletBpn()).getBody());
         String audience = "audience";
         String did = DidWebFactory.fromHostnameAndPath(miwSettings.host(), bpn).toString();
 
@@ -535,7 +536,8 @@ class PresentationTest {
 
     @NotNull
     private Map<String, Object> getIssueVPRequest(String bpn) throws JsonProcessingException {
-        ResponseEntity<String> response = TestUtils.createWallet(bpn, bpn, restTemplate);
+        String baseBpn = miwSettings.authorityWalletBpn();
+        ResponseEntity<String> response = TestUtils.createWallet(bpn, bpn, restTemplate, baseBpn);
         Assertions.assertEquals(response.getStatusCode().value(), HttpStatus.CREATED.value());
         Wallet wallet = TestUtils.getWalletFromString(response.getBody());
 
@@ -551,7 +553,6 @@ class PresentationTest {
         return request;
     }
 
-
     private void mockRevocationVerification(boolean revoked) {
         Mockito.reset(revocationClient);
         StatusVerificationResponse statusVerificationResponse = new StatusVerificationResponse();
@@ -563,8 +564,9 @@ class PresentationTest {
     private static void mockVCSignatureVarification(MockedStatic<LinkedDataProofValidation> utils, boolean validSignature) {
         LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
         utils.when(() -> {
-            LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
+            LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidWebResolver.class));
         }).thenReturn(mock);
-        Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(validSignature);
+        Mockito.when(mock.verifyProof(Mockito.any(VerifiableCredential.class))).thenReturn(validSignature);
     }
+
 }
