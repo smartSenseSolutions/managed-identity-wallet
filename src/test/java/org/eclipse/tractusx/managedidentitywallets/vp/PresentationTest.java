@@ -46,13 +46,14 @@ import org.eclipse.tractusx.managedidentitywallets.revocation.service.Revocation
 import org.eclipse.tractusx.managedidentitywallets.service.PresentationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.AuthenticationUtils;
 import org.eclipse.tractusx.managedidentitywallets.utils.TestUtils;
-import org.eclipse.tractusx.ssi.lib.did.resolver.DidResolver;
+import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistry;
+import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
 import org.eclipse.tractusx.ssi.lib.did.web.DidWebFactory;
-import org.eclipse.tractusx.ssi.lib.did.web.DidWebResolver;
 import org.eclipse.tractusx.ssi.lib.exception.DidDocumentResolverNotRegisteredException;
 import org.eclipse.tractusx.ssi.lib.exception.JwtException;
 import org.eclipse.tractusx.ssi.lib.jwt.SignedJwtVerifier;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
+import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialType;
 import org.eclipse.tractusx.ssi.lib.proof.LinkedDataProofValidation;
 import org.eclipse.tractusx.ssi.lib.proof.SignatureType;
 import org.jetbrains.annotations.NotNull;
@@ -131,8 +132,8 @@ class PresentationTest {
         Map<String, Object> vpResponse = presentation;
         try (MockedConstruction<SignedJwtVerifier> mocked = Mockito.mockConstruction(SignedJwtVerifier.class)) {
 
-            DidResolver didResolver = Mockito.mock(DidWebResolver.class);
-            SignedJwtVerifier signedJwtVerifier = new SignedJwtVerifier(didResolver);
+            DidDocumentResolverRegistry didDocumentResolverRegistry = Mockito.mock(DidDocumentResolverRegistry.class);
+            SignedJwtVerifier signedJwtVerifier = new SignedJwtVerifier(didDocumentResolverRegistry);
 
             Mockito.doThrow(new JwtException("invalid")).when(signedJwtVerifier).verify(Mockito.any(SignedJWT.class));
             log.info("Waiting for 62 sec.");
@@ -561,12 +562,42 @@ class PresentationTest {
         Mockito.when(revocationClient.verify(Mockito.any(StatusVerificationRequest.class))).thenReturn(statusVerificationResponse);
     }
 
+    @NotNull
+    private ResponseEntity<Map> getIssueVPRequestWithShortExpiry(String bpn, String audience) throws JsonProcessingException {
+        String baseBpn = miwSettings.authorityWalletBpn();
+        ResponseEntity<String> response = TestUtils.createWallet(bpn, bpn, restTemplate, baseBpn);
+        Assertions.assertEquals(response.getStatusCode().value(), HttpStatus.CREATED.value());
+        Wallet wallet = TestUtils.getWalletFromString(response.getBody());
+
+        //create VC
+        HttpHeaders headers = AuthenticationUtils.getValidUserHttpHeaders(miwSettings.authorityWalletBpn());
+        String type = VerifiableCredentialType.MEMBERSHIP_CREDENTIAL;
+        Instant vcExpiry = Instant.now().minusSeconds(60);
+
+        VerifiableCredential verifiableCredential = TestUtils.issueRandomVC(wallet.getBpn(), wallet.getDid(), miwSettings, objectMapper, revocationClient, restTemplate);
+
+        Map<String, Object> map = objectMapper.readValue(verifiableCredential.toJson(), Map.class);
+
+        //create request
+        Map<String, Object> request = new HashMap<>();
+        request.put(StringPool.HOLDER_IDENTIFIER, wallet.getDid());
+        request.put(StringPool.VERIFIABLE_CREDENTIALS, List.of(map));
+
+        headers = AuthenticationUtils.getValidUserHttpHeaders(bpn);
+        headers.put(HttpHeaders.CONTENT_TYPE, List.of(MediaType.APPLICATION_JSON_VALUE));
+
+        HttpEntity<String> entity = new HttpEntity<>(objectMapper.writeValueAsString(request), headers);
+
+        ResponseEntity<Map> vpResponse = restTemplate.exchange(RestURI.API_PRESENTATIONS + "?asJwt={asJwt}&audience={audience}", HttpMethod.POST, entity, Map.class, true, audience);
+        return vpResponse;
+    }
+
     private static void mockVCSignatureVarification(MockedStatic<LinkedDataProofValidation> utils, boolean validSignature) {
         LinkedDataProofValidation mock = Mockito.mock(LinkedDataProofValidation.class);
         utils.when(() -> {
-            LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidWebResolver.class));
+            LinkedDataProofValidation.newInstance(Mockito.any(SignatureType.class), Mockito.any(DidDocumentResolverRegistryImpl.class));
         }).thenReturn(mock);
-        Mockito.when(mock.verifyProof(Mockito.any(VerifiableCredential.class))).thenReturn(validSignature);
+        Mockito.when(mock.verifiyProof(Mockito.any(VerifiableCredential.class))).thenReturn(validSignature);
     }
 
 }

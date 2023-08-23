@@ -32,8 +32,9 @@ import org.eclipse.tractusx.managedidentitywallets.exception.CredentialValidatio
 import org.eclipse.tractusx.managedidentitywallets.exception.ForbiddenException;
 import org.eclipse.tractusx.managedidentitywallets.revocation.service.RevocationService;
 import org.eclipse.tractusx.managedidentitywallets.utils.Validate;
-import org.eclipse.tractusx.ssi.lib.did.resolver.DidResolver;
-import org.eclipse.tractusx.ssi.lib.did.web.DidWebResolver;
+import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistry;
+import org.eclipse.tractusx.ssi.lib.did.resolver.DidDocumentResolverRegistryImpl;
+import org.eclipse.tractusx.ssi.lib.did.web.DidWebDocumentResolver;
 import org.eclipse.tractusx.ssi.lib.did.web.util.DidWebParser;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredential;
 import org.eclipse.tractusx.ssi.lib.model.verifiable.credential.VerifiableCredentialStatusList2021Entry;
@@ -72,23 +73,26 @@ public class CredentialService {
     public Map<String, Object> credentialsValidation(VerifiableCredential verifiableCredential, boolean withCredentialExpiryDate, boolean withRevocation) {
 
         // DID Resolver Constracture params
-        DidResolver didResolver = new DidWebResolver(HttpClient.newHttpClient(), new DidWebParser(), miwSettings.enforceHttps());
+        DidDocumentResolverRegistry didDocumentResolverRegistry = new DidDocumentResolverRegistryImpl();
+        didDocumentResolverRegistry.register(
+                new DidWebDocumentResolver(HttpClient.newHttpClient(), new DidWebParser(), miwSettings.enforceHttps()));
+
 
         String proofTye = verifiableCredential.getProof().get(StringPool.TYPE).toString();
         LinkedDataProofValidation proofValidation;
         if (SignatureType.ED21559.toString().equals(proofTye)) {
             proofValidation = LinkedDataProofValidation.newInstance(
                     SignatureType.ED21559,
-                    didResolver);
+                    didDocumentResolverRegistry);
         } else if (SignatureType.JWS.toString().equals(proofTye)) {
             proofValidation = LinkedDataProofValidation.newInstance(
                     SignatureType.JWS,
-                    didResolver);
+                    didDocumentResolverRegistry);
         } else {
             throw new BadDataException(String.format("Invalid proof type: %s", proofTye));
         }
 
-        boolean valid = proofValidation.verifyProof(verifiableCredential);
+        boolean valid = proofValidation.verifiyProof(verifiableCredential);
         Map<String, Object> response = new TreeMap<>();
 
         //check expiry
